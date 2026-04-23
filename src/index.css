@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-bg text-slate-100 font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    min-width: 1280px;
+  }
+  * { border-color: theme('colors.bg.border'); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #0a0d14; }
+  ::-webkit-scrollbar-thumb { background: #1f2533; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2b3345; }
+}
+
+@layer components {
+  .surface {
+    @apply bg-bg-surface border border-bg-border rounded-xl shadow-card;
+  }
+  .surface-elevated {
+    @apply bg-bg-elevated border border-bg-border rounded-xl;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-accent hover:bg-accent-hover text-white;
+  }
+  .btn-secondary {
+    @apply btn bg-bg-elevated hover:bg-bg-border text-slate-100 border border-bg-border;
+  }
+  .btn-ghost {
+    @apply btn hover:bg-bg-elevated text-slate-300;
+  }
+  .input {
+    @apply bg-bg-elevated border border-bg-border rounded-lg px-3 py-2 text-sm
+           text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-accent
+           focus:ring-2 focus:ring-accent/30 transition;
+  }
+  .label { @apply text-xs uppercase tracking-wider text-slate-400 font-medium; }
+  .iata {
+    @apply font-display font-extrabold tracking-tight;
+    font-feature-settings: "ss01";
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full
+           text-xs font-medium font-mono;
+  }
+  .pill-pend { @apply pill bg-slate-500/15 text-slate-300 border border-slate-500/30; }
+  .pill-done { @apply pill bg-success/15 text-success border border-success/30; }
+  .pill-vencida { @apply pill bg-danger/15 text-danger border border-danger/30; }
+  .pill-warn { @apply pill bg-warning/15 text-warning border border-warning/30; }
+  .row-hover { @apply hover:bg-bg-elevated/50 transition-colors; }
+}
+
+/* Progreso con gradiente verde→amarillo→rojo */
+.progress-gradient {
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 60%, #10b981 85%);
+}

@@ -1,0 +1,4 @@
+0000000000000000000000000000000000000000 55887827421be26d1147638d1dbd260a74f06ebd StoreControl Admin <logistics@h-la.es> 1776864613 +0200	commit (initial): feat: Add PDF upload functionality and 8 format templates
+55887827421be26d1147638d1dbd260a74f06ebd 82c2e07411a3a298c39d124d96bfbac36f5ef2d1 StoreControl Admin <logistics@h-la.es> 1776871294 +0200	commit: feat: Add PDF upload functionality to Formatos component
+82c2e07411a3a298c39d124d96bfbac36f5ef2d1 a5a1ad131564b9f28b01a44cbc9f01618fbf771a StoreControl Admin <logistics@h-la.es> 1776872397 +0200	commit: feat: Add PDF upload functionality and 8 format templates
+a5a1ad131564b9f28b01a44cbc9f01618fbf771a 0d056ec2bca51375b729c47132ed0e49a0333d7b StoreControl Admin <logistics@h-la.es> 1776894014 +0200	reset: moving to origin/main

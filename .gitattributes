@@ -1,0 +1,26 @@
+# Normalizar line endings: todo a LF excepto archivos Windows específicos
+* text=auto eol=lf
+
+# Scripts y archivos de texto siempre LF
+*.sh          text eol=lf
+*.ts          text eol=lf
+*.tsx         text eol=lf
+*.js          text eol=lf
+*.jsx         text eol=lf
+*.json        text eol=lf
+*.md          text eol=lf
+*.sql         text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+*.css         text eol=lf
+*.html        text eol=lf
+
+# Binarios
+*.pdf         binary
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.ico         binary
+*.woff        binary
+*.woff2       binary

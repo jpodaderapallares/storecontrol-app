@@ -1,0 +1,19 @@
+node_modules
+dist
+.env
+.env.local
+.DS_Store
+.vite
+*.log
+
+# Claude / editor artifacts
+CLAUDE/
+.claude/
+
+# Duplicados y backups accidentales
+package (*).json
+*.bak
+*.orig
+
+# PDFs traídos por pulls accidentales (NO committear PDFs grandes)
+LOGINFO_*.pdf
