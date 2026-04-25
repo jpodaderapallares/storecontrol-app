@@ -3,7 +3,7 @@
 export type RolUsuario = 'admin' | 'storekeeper'
 export type Frecuencia = 'diaria' | 'semanal' | 'mensual' | 'trimestral' | 'semestral' | 'anual'
 export type FrecuenciaTarea = 'diaria' | 'semanal' | 'mensual' | 'trimestral' | 'semestral' | 'anual'
-export type EstadoInstancia = 'pendiente' | 'completada' | 'vencida' | 'revisada'
+export type EstadoInstancia = 'pendiente' | 'completada' | 'vencida' | 'revisada' | 'desasignada'
 export type EvidenciaTipo = 'pdf' | 'foto' | 'cualquiera' | 'no_requerida'
 export type TipoNotificacion = 'recordatorio_1' | 'recordatorio_2' | 'vencimiento' | 'escalado'
 

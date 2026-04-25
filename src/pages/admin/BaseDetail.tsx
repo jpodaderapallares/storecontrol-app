@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+import { supabase, logAccion } from '@/lib/supabase'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EstadoBadge } from '@/components/ui/Badge'
 import { fmtDateTime, fmtTime } from '@/lib/format'
-import { Download, FileText, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Download, FileText, ChevronRight, ChevronLeft, UserMinus, RotateCcw } from 'lucide-react'
 import clsx from 'clsx'
 import type { Base, TareaInstancia, Usuario } from '@/lib/database.types'
 
@@ -71,6 +71,28 @@ export default function BaseDetail() {
     }
   }
 
+  async function desasignar(id: string, titulo: string) {
+    if (!confirm(`Desasignar la tarea "${titulo}".\nNo contará como incumplida en el dashboard ni generará notificaciones.`)) return
+    await supabase.from('tareas_instancia')
+      .update({ estado: 'desasignada', usuario_id: null })
+      .eq('id', id)
+    await logAccion('tarea_desasignada', 'tareas_instancia', id, { titulo })
+    cargarItems()
+  }
+
+  async function reasignar(id: string, titulo: string) {
+    if (!storekeeper) {
+      alert('No hay storekeeper asignado a esta base. Asigna uno desde Usuarios para poder reasignar.')
+      return
+    }
+    if (!confirm(`Reasignar "${titulo}" al storekeeper de la base (${storekeeper.nombre}) y volver a pendiente?`)) return
+    await supabase.from('tareas_instancia')
+      .update({ estado: 'pendiente', usuario_id: storekeeper.id })
+      .eq('id', id)
+    await logAccion('tarea_reasignada', 'tareas_instancia', id, { titulo })
+    cargarItems()
+  }
+
   async function exportarInforme() {
     // Stub: en prod llamar a una Edge Function que genere un PDF con pdf-lib o Puppeteer.
     alert('Informe PDF generado (stub). En producción se descarga del backend.')
@@ -79,6 +101,7 @@ export default function BaseDetail() {
   const completadas = items.filter(i => i.estado === 'completada').length
   const vencidas = items.filter(i => i.estado === 'vencida').length
   const pendientes = items.filter(i => i.estado === 'pendiente').length
+  const desasignadas = items.filter(i => i.estado === 'desasignada').length
 
   return (
     <>
@@ -115,6 +138,10 @@ export default function BaseDetail() {
             <div>
               <div className="font-display text-2xl font-bold text-danger">{vencidas}</div>
               <div className="text-[11px] text-slate-500 font-mono uppercase">Vencidas</div>
+            </div>
+            <div>
+              <div className="font-display text-2xl font-bold text-slate-400">{desasignadas}</div>
+              <div className="text-[11px] text-slate-500 font-mono uppercase">Desasignadas</div>
             </div>
           </div>
         </div>
@@ -175,13 +202,31 @@ export default function BaseDetail() {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="flex items-center gap-2">
                 {i.pdf_path && (
                   <button
                     className="btn-secondary"
                     onClick={() => descargarPdf(i.pdf_path, i.pdf_nombre)}
                   >
                     <FileText className="w-4 h-4" /> {i.pdf_nombre?.substring(0, 24) ?? 'Evidencia.pdf'}
+                  </button>
+                )}
+                {(i.estado === 'pendiente' || i.estado === 'vencida') && (
+                  <button
+                    className="btn-ghost text-slate-400 hover:text-warning"
+                    title="Desasignar (no contará como incumplida)"
+                    onClick={() => desasignar(i.id, i.tareas_plantilla?.titulo ?? 'tarea')}
+                  >
+                    <UserMinus className="w-4 h-4" /> Desasignar
+                  </button>
+                )}
+                {i.estado === 'desasignada' && (
+                  <button
+                    className="btn-ghost text-accent"
+                    title="Reasignar al storekeeper de la base"
+                    onClick={() => reasignar(i.id, i.tareas_plantilla?.titulo ?? 'tarea')}
+                  >
+                    <RotateCcw className="w-4 h-4" /> Reasignar
                   </button>
                 )}
               </div>

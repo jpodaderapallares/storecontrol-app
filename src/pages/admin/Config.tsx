@@ -4,12 +4,41 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import type { Base } from '@/lib/database.types'
 import { Save, Plus } from 'lucide-react'
 
+type TipoNotif = 'recordatorio_24h' | 'recordatorio_hoy' | 'vencida_24h' | 'escalado_admin'
+type Frecuencia = 'diaria' | 'semanal' | 'mensual' | 'trimestral' | 'semestral' | 'anual'
+
+interface MatrizNotif {
+  recordatorio_24h: Record<Frecuencia, boolean>
+  recordatorio_hoy: Record<Frecuencia, boolean>
+  vencida_24h: Record<Frecuencia, boolean>
+  escalado_admin: Record<Frecuencia, boolean>
+}
+
+const TIPOS: { key: TipoNotif; label: string; descripcion: string }[] = [
+  { key: 'recordatorio_24h', label: 'Recordatorio 24h antes', descripcion: 'Aviso al storekeeper 24h antes del vencimiento' },
+  { key: 'recordatorio_hoy', label: 'Recordatorio mismo día',  descripcion: 'Aviso al storekeeper en las 4h previas al vencimiento' },
+  { key: 'vencida_24h',      label: 'Tarea vencida (24h)',     descripcion: '24h después sin completar — storekeeper + CC admin' },
+  { key: 'escalado_admin',   label: 'Escalado admin (48h)',    descripcion: '48h después sin completar — solo admin' },
+]
+const FRECUENCIAS: Frecuencia[] = ['diaria','semanal','mensual','trimestral','semestral','anual']
+
+function matrizDefault(): MatrizNotif {
+  const allOn = Object.fromEntries(FRECUENCIAS.map(f => [f, true])) as Record<Frecuencia, boolean>
+  return {
+    recordatorio_24h: { ...allOn, diaria: false }, // sin spam para diarias
+    recordatorio_hoy: { ...allOn },
+    vencida_24h:      { ...allOn },
+    escalado_admin:   { ...allOn },
+  }
+}
+
 interface ConfMap {
   empresa: { nombre: string; certificado_easa: string; email_admin: string }
   umbrales_cumplimiento: { verde: number; amarillo: number; rojo: number }
   dias_sin_actividad_alerta: number
   recordatorios_antes_escalado: number
   horas_escalado_vencida: number
+  notificaciones_matriz: MatrizNotif
 }
 
 export default function Config() {
@@ -22,6 +51,8 @@ export default function Config() {
     const { data } = await supabase.from('configuracion').select('*')
     const map: any = {}
     for (const r of data ?? []) map[r.clave] = r.valor
+    // Si no existe la matriz aún (config legacy), aplicar default
+    if (!map.notificaciones_matriz) map.notificaciones_matriz = matrizDefault()
     setConf(map)
     const { data: b } = await supabase.from('bases').select('*').order('codigo_iata')
     setBases(b ?? [])
@@ -108,6 +139,70 @@ export default function Config() {
               <input type="number" className="input w-full mt-1 font-mono" value={conf.horas_escalado_vencida}
                 onChange={e => setConf({ ...conf, horas_escalado_vencida: Number(e.target.value) })} />
             </div>
+          </div>
+        </div>
+
+        <div className="surface p-6 col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-display text-lg font-bold">Frecuencia de notificaciones</h3>
+            <button
+              className="btn-ghost text-xs"
+              onClick={() => setConf({ ...conf, notificaciones_matriz: matrizDefault() })}
+            >
+              Restaurar por defecto
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">
+            Activa o desactiva cada combinación tipo de aviso × frecuencia de tarea.
+            Las desactivadas no se enviarán por email.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-slate-400 uppercase">
+                <tr>
+                  <th className="text-left py-2 pr-4">Tipo de aviso</th>
+                  {FRECUENCIAS.map(f => (
+                    <th key={f} className="text-center py-2 px-2 capitalize font-mono">{f}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {TIPOS.map(({ key, label, descripcion }) => (
+                  <tr key={key} className="border-t border-bg-border">
+                    <td className="py-2 pr-4">
+                      <div className="font-medium">{label}</div>
+                      <div className="text-xs text-slate-500">{descripcion}</div>
+                    </td>
+                    {FRECUENCIAS.map(f => {
+                      const checked = conf.notificaciones_matriz?.[key]?.[f] ?? true
+                      return (
+                        <td key={f} className="text-center py-2 px-2">
+                          <button
+                            onClick={() => setConf({
+                              ...conf,
+                              notificaciones_matriz: {
+                                ...conf.notificaciones_matriz,
+                                [key]: { ...conf.notificaciones_matriz[key], [f]: !checked },
+                              },
+                            })}
+                            className={[
+                              'w-9 h-5 rounded-full transition-colors relative inline-block',
+                              checked ? 'bg-accent' : 'bg-bg-border',
+                            ].join(' ')}
+                            title={checked ? 'Activado' : 'Desactivado'}
+                          >
+                            <span className={[
+                              'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform',
+                              checked ? 'translate-x-4' : 'translate-x-0.5',
+                            ].join(' ')} />
+                          </button>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

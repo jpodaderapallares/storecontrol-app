@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, logAccion } from '@/lib/supabase'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { AlertTriangle, BellRing, CheckCheck, Eye } from 'lucide-react'
+import { AlertTriangle, BellRing, CheckCheck, Eye, Trash2, Eraser } from 'lucide-react'
 import { fmtRelativa } from '@/lib/format'
 import clsx from 'clsx'
 
@@ -12,6 +12,7 @@ export default function Alertas() {
   const [vencidas, setVencidas] = useState<any[]>([])
   const [recordatorios, setRecordatorios] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [limpiando, setLimpiando] = useState(false)
 
   useEffect(() => { cargar() }, [])
 
@@ -38,6 +39,35 @@ export default function Alertas() {
     cargar()
   }
 
+  async function marcarTodasRevisadas() {
+    if (!confirm(`Marcar las ${vencidas.length} alertas vencidas como revisadas?\nDejarán de aparecer en el listado.`)) return
+    setLimpiando(true)
+    const ids = vencidas.map((v: any) => v.id)
+    if (ids.length > 0) {
+      await supabase.from('tareas_instancia').update({ estado: 'revisada' }).in('id', ids)
+      await logAccion('alertas_revisadas_bulk', 'tareas_instancia', undefined, { count: ids.length })
+    }
+    setLimpiando(false)
+    cargar()
+  }
+
+  async function limpiarLogsAntiguos(dias: number) {
+    if (!confirm(`Borrar logs de notificaciones de más de ${dias} días?\nLas estadísticas históricas no se verán afectadas (auditoría queda en audit_log).`)) return
+    setLimpiando(true)
+    const limite = new Date(Date.now() - dias * 24 * 3600 * 1000).toISOString()
+    const { error, count } = await supabase
+      .from('notificaciones_log')
+      .delete({ count: 'exact' })
+      .lt('enviado_at', limite)
+    if (error) {
+      alert('Error al limpiar: ' + error.message)
+    } else {
+      await logAccion('logs_notificaciones_purga', 'notificaciones_log', undefined, { dias, borrados: count ?? 0 })
+    }
+    setLimpiando(false)
+    cargar()
+  }
+
   const items = tab === 'recordatorios' ? recordatorios : vencidas
 
   return (
@@ -45,6 +75,36 @@ export default function Alertas() {
       <PageHeader
         title="Centro de alertas"
         subtitle="Incumplimientos y recordatorios enviados"
+        actions={
+          <>
+            {vencidas.length > 0 && (
+              <button
+                className="btn-secondary"
+                onClick={marcarTodasRevisadas}
+                disabled={limpiando}
+                title="Marcar todas las vencidas listadas como revisadas"
+              >
+                <CheckCheck className="w-4 h-4" /> Marcar todas revisadas
+              </button>
+            )}
+            <button
+              className="btn-ghost"
+              onClick={() => limpiarLogsAntiguos(30)}
+              disabled={limpiando}
+              title="Borrar log de notificaciones >30 días"
+            >
+              <Eraser className="w-4 h-4" /> Limpiar logs &gt;30d
+            </button>
+            <button
+              className="btn-ghost text-danger"
+              onClick={() => limpiarLogsAntiguos(90)}
+              disabled={limpiando}
+              title="Borrar log de notificaciones >90 días"
+            >
+              <Trash2 className="w-4 h-4" /> Purga &gt;90d
+            </button>
+          </>
+        }
       />
       <div className="flex gap-1 mb-4 border-b border-bg-border">
         {([

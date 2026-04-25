@@ -56,9 +56,10 @@ export default function Dashboard() {
     const instSemana = instanciasSemana.data ?? []
     const instHoy = instanciasHoy.data ?? []
 
-    // Por base
+    // Por base — las desasignadas NO cuentan ni en numerador ni en denominador
     const stats: BaseStats[] = basesList.map(b => {
-      const delBase = instSemana.filter(i => i.base_id === b.id)
+      const delBaseAll = instSemana.filter(i => i.base_id === b.id)
+      const delBase = delBaseAll.filter(i => i.estado !== 'desasignada')
       const completadas = delBase.filter(i => i.estado === 'completada').length
       const total = delBase.length
       const vencidas = delBase.filter(i => i.estado === 'vencida').length
@@ -75,9 +76,10 @@ export default function Dashboard() {
     setBases(stats)
     setPeoresBases([...stats].sort((a,b) => a.cumplimiento - b.cumplimiento).slice(0, 5))
 
-    // KPIs
-    const completadasHoy = instHoy.filter(i => i.estado === 'completada').length
-    const cumplimientoHoy = instHoy.length > 0 ? Math.round((completadasHoy / instHoy.length) * 100) : 100
+    // KPIs — excluir desasignadas
+    const instHoyEfectivas = instHoy.filter(i => i.estado !== 'desasignada')
+    const completadasHoy = instHoyEfectivas.filter(i => i.estado === 'completada').length
+    const cumplimientoHoy = instHoyEfectivas.length > 0 ? Math.round((completadasHoy / instHoyEfectivas.length) * 100) : 100
     const vencidasTot = instSemana.filter(i => i.estado === 'vencida').length
     const usuarios = usuariosQ.data ?? []
     const hace24h = new Date(Date.now() - 24*3600*1000)
@@ -85,8 +87,10 @@ export default function Dashboard() {
 
     setKpi({ bases: basesList.length, cumplimientoHoy, vencidas: vencidasTot, inactivos })
 
-    // Por frecuencia (mes)
-    const instMes = instSemana.filter(i => new Date(i.fecha_asignada) >= inicioMes)
+    // Por frecuencia (mes) — excluir desasignadas
+    const instMes = instSemana.filter(i =>
+      new Date(i.fecha_asignada) >= inicioMes && i.estado !== 'desasignada',
+    )
     const freq: Record<string, { total: number; done: number }> = {}
     for (const i of instMes) {
       const f = (i as any).tareas_plantilla?.frecuencia ?? 'otra'
