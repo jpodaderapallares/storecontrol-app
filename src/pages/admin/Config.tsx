@@ -32,6 +32,34 @@ function matrizDefault(): MatrizNotif {
   }
 }
 
+interface DigestsConf {
+  enabled: boolean
+  daily_enabled: boolean
+  weekly_enabled: boolean
+  monthly_enabled: boolean
+  admin_weekly_enabled: boolean
+  admin_critico_enabled: boolean
+  admin_email: string
+  hora_envio_local: string
+  umbral_critico_dias: number
+  no_enviar_a: string[]
+}
+
+function digestsDefault(): DigestsConf {
+  return {
+    enabled: true,
+    daily_enabled: true,
+    weekly_enabled: true,
+    monthly_enabled: true,
+    admin_weekly_enabled: true,
+    admin_critico_enabled: true,
+    admin_email: 'logistics@h-la.es',
+    hora_envio_local: '07:30',
+    umbral_critico_dias: 7,
+    no_enviar_a: [],
+  }
+}
+
 interface ConfMap {
   empresa: { nombre: string; certificado_easa: string; email_admin: string }
   umbrales_cumplimiento: { verde: number; amarillo: number; rojo: number }
@@ -39,6 +67,7 @@ interface ConfMap {
   recordatorios_antes_escalado: number
   horas_escalado_vencida: number
   notificaciones_matriz: MatrizNotif
+  digests: DigestsConf
 }
 
 export default function Config() {
@@ -53,6 +82,9 @@ export default function Config() {
     for (const r of data ?? []) map[r.clave] = r.valor
     // Si no existe la matriz aún (config legacy), aplicar default
     if (!map.notificaciones_matriz) map.notificaciones_matriz = matrizDefault()
+    // Si no existe la conf de digests, aplicar default + completar campos faltantes
+    map.digests = { ...digestsDefault(), ...(map.digests ?? {}) }
+    if (!Array.isArray(map.digests.no_enviar_a)) map.digests.no_enviar_a = []
     setConf(map)
     const { data: b } = await supabase.from('bases').select('*').order('codigo_iata')
     setBases(b ?? [])
@@ -203,6 +235,125 @@ export default function Config() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div className="surface p-6 col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-display text-lg font-bold">Digests por email · sustituye a los avisos por tarea</h3>
+            <span className="text-xs text-slate-500">
+              {conf.digests.enabled ? 'Sistema digests ACTIVO' : 'Sistema digests DESACTIVADO (no se envían emails)'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">
+            Sustituye al ciclo recordatorio_24h / recordatorio_hoy / vencida_24h / escalado_admin.
+            Cada storekeeper recibe como máximo: 1 digest diario, 1 semanal y 1 mensual.
+            El admin recibe 1 KPI semanal + un único email crítico por instancia con &gt; X días vencida.
+          </p>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">Master switch</div>
+                  <div className="text-xs text-slate-500">Si está OFF, no se envía ningún digest.</div>
+                </div>
+                <button
+                  onClick={() => setConf({ ...conf, digests: { ...conf.digests, enabled: !conf.digests.enabled } })}
+                  className={[
+                    'w-9 h-5 rounded-full transition-colors relative inline-block',
+                    conf.digests.enabled ? 'bg-accent' : 'bg-bg-border',
+                  ].join(' ')}
+                >
+                  <span className={[
+                    'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform',
+                    conf.digests.enabled ? 'translate-x-4' : 'translate-x-0.5',
+                  ].join(' ')} />
+                </button>
+              </div>
+
+              {([
+                { key: 'daily_enabled',         label: 'Digest diario',          hint: 'Tareas diarias del día (1 email/storekeeper).' },
+                { key: 'weekly_enabled',        label: 'Digest semanal (lunes)', hint: 'Tareas semanales de la semana (1 email/storekeeper).' },
+                { key: 'monthly_enabled',       label: 'Digest mensual',         hint: 'Mensuales/trimestrales/semestrales/anuales (1 email/storekeeper, 1.er laborable).' },
+                { key: 'admin_weekly_enabled',  label: 'KPI semanal admin',      hint: 'Resumen de cumplimiento (lunes 09–10 UTC).' },
+                { key: 'admin_critico_enabled', label: 'Aviso crítico admin',    hint: 'Una sola vez por instancia con > umbral de días vencida.' },
+              ] as const).map(({ key, label, hint }) => (
+                <div key={key} className="flex items-center justify-between border-t border-bg-border pt-3">
+                  <div>
+                    <div className="font-medium text-sm">{label}</div>
+                    <div className="text-xs text-slate-500">{hint}</div>
+                  </div>
+                  <button
+                    onClick={() => setConf({
+                      ...conf,
+                      digests: { ...conf.digests, [key]: !conf.digests[key] },
+                    })}
+                    className={[
+                      'w-9 h-5 rounded-full transition-colors relative inline-block',
+                      conf.digests[key] ? 'bg-accent' : 'bg-bg-border',
+                    ].join(' ')}
+                  >
+                    <span className={[
+                      'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform',
+                      conf.digests[key] ? 'translate-x-4' : 'translate-x-0.5',
+                    ].join(' ')} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="label">Email destino del admin</label>
+                <input
+                  className="input w-full mt-1 font-mono"
+                  value={conf.digests.admin_email}
+                  onChange={e => setConf({ ...conf, digests: { ...conf.digests, admin_email: e.target.value } })}
+                />
+              </div>
+              <div>
+                <label className="label">Hora de envío local (HH:MM, zona horaria de cada base)</label>
+                <input
+                  className="input w-full mt-1 font-mono"
+                  placeholder="07:30"
+                  value={conf.digests.hora_envio_local}
+                  onChange={e => setConf({ ...conf, digests: { ...conf.digests, hora_envio_local: e.target.value } })}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  El cron es horario en UTC; cada función decide cuándo es esta hora local en cada base.
+                </p>
+              </div>
+              <div>
+                <label className="label">Umbral “crítico” admin (días vencida)</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="input w-full mt-1 font-mono"
+                  value={conf.digests.umbral_critico_dias}
+                  onChange={e => setConf({ ...conf, digests: { ...conf.digests, umbral_critico_dias: Number(e.target.value) } })}
+                />
+              </div>
+              <div>
+                <label className="label">No enviar digests a (lista de emails, una por línea)</label>
+                <textarea
+                  className="input w-full mt-1 font-mono text-xs"
+                  rows={4}
+                  placeholder="alguien@h-la.es"
+                  value={conf.digests.no_enviar_a.join('\n')}
+                  onChange={e => setConf({
+                    ...conf,
+                    digests: {
+                      ...conf.digests,
+                      no_enviar_a: e.target.value.split('\n').map(s => s.trim()).filter(Boolean),
+                    },
+                  })}
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Útil para excepciones (auditores, cuentas de prueba). Aplica a todos los buckets.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
