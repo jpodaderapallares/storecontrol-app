@@ -39,12 +39,14 @@ if errorlevel 1 (
 )
 
 echo.
-echo === git add (modulo QR + fix dashboard) ===
+echo === git add (QR + fix dashboard + UX storekeeper + tooltips + logo HLA) ===
 git add ^
   src\App.tsx ^
   src\components\layout\StorekeeperLayout.tsx ^
+  src\components\layout\Sidebar.tsx ^
   src\lib\database.types.ts ^
   src\pages\admin\Dashboard.tsx ^
+  src\pages\storekeeper\Home.tsx ^
   src\pages\storekeeper\QR.tsx ^
   src\pages\qr\QrRedirect.tsx ^
   supabase\functions\qr-redirect\index.ts ^
@@ -60,7 +62,7 @@ if exist "public\hla-logo.png" git add public\hla-logo.png
 
 echo.
 echo === git commit ===
-git commit -m "feat(qr): modulo Generar QR (papelera + redirect publico) + fix dashboard 100%"
+git commit -m "feat(qr+ux): modulo QR + fix dashboard domingo + storekeeper agrupado + tooltips + logo HLA"
 
 echo.
 echo === git push ===

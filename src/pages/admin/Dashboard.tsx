@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -40,7 +40,13 @@ export default function Dashboard() {
   async function cargar() {
     setLoading(true)
     const hoy = new Date()
-    const inicioSemana = new Date(hoy); inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1)
+    // Lunes = inicio de semana (convención ES). getDay() devuelve 0=Dom,1=Lun…6=Sáb,
+    // por lo que en domingo hay que retroceder 6 días, no avanzar 1 (bug original).
+    const dia = hoy.getDay()
+    const offsetLunes = dia === 0 ? 6 : dia - 1
+    const inicioSemana = new Date(hoy)
+    inicioSemana.setDate(hoy.getDate() - offsetLunes)
+    inicioSemana.setHours(0, 0, 0, 0)
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
     const finHoy = new Date(hoy); finHoy.setHours(23,59,59,999)
     const inicioHoy = new Date(hoy); inicioHoy.setHours(0,0,0,0)
@@ -287,13 +293,18 @@ function BaseTile({ s }: { s: BaseStats }) {
         <ProgressBar pct={s.cumplimiento as number} />
       )}
       <div className="flex items-center justify-between mt-3 text-[11px] font-mono">
-        <span className={c.text}>
+        <span className={c.text} title={sinTareas ? 'Sin tareas asignadas esta semana' : 'Cumplimiento semanal'}>
           {sinTareas ? 'sin tareas' : `${s.cumplimiento}%`}
         </span>
         <div className="flex gap-2 text-slate-500">
-          <span>✓{s.completadas_semana}</span>
-          <span>⏳{s.pendientes_hoy}</span>
-          <span className={s.vencidas > 0 ? 'text-danger' : ''}>✗{s.vencidas}</span>
+          <span title="Completadas esta semana">✓{s.completadas_semana}</span>
+          <span title="Pendientes para hoy">⏳{s.pendientes_hoy}</span>
+          <span
+            className={s.vencidas > 0 ? 'text-danger' : ''}
+            title="Vencidas esta semana"
+          >
+            ✗{s.vencidas}
+          </span>
         </div>
       </div>
     </Link>

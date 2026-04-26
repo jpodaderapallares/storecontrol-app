@@ -63,7 +63,6 @@ export default function StorekeeperQR() {
   const [progresoArchivo, setProgresoArchivo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [qrAbierto, setQrAbierto] = useState<DocumentoQR | null>(null)
-  const [logoOk, setLogoOk] = useState(true) // graceful degradation
 
   useEffect(() => {
     if (!usuario || !base) return
@@ -243,18 +242,6 @@ export default function StorekeeperQR() {
       <PageHeader
         title="Generar QR"
         subtitle="Sube un documento de herramientas y obtén un QR para imprimir o compartir."
-        actions={
-          <div className="flex items-center gap-3">
-            {logoOk && (
-              <img
-                src="/hla-logo.png"
-                alt="HLA"
-                className="h-9 opacity-90"
-                onError={() => setLogoOk(false)}
-              />
-            )}
-          </div>
-        }
       />
 
       {/* Pestañas */}
