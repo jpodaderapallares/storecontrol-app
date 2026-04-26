@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, logAccion } from '@/lib/supabase'
 import { useAuth } from '@/stores/authStore'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Save, Mail, Eye, Code } from 'lucide-react'
+import { Save, Mail, Eye, Code, HelpCircle, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import type { PlantillaEmail } from '@/lib/database.types'
 
 const TIPO_INFO: Record<PlantillaEmail['tipo'], { label: string; when: string; who: string }> = {
@@ -50,9 +50,10 @@ export default function PlantillasEmail() {
   const { usuario } = useAuth()
   const [plantillas, setPlantillas] = useState<PlantillaEmail[]>([])
   const [seleccionada, setSeleccionada] = useState<PlantillaEmail | null>(null)
-  const [vista, setVista] = useState<'html' | 'preview'>('html')
+  const [vista, setVista] = useState<'html' | 'preview'>('preview')
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
+  const [ayudaAbierta, setAyudaAbierta] = useState(true)
 
   useEffect(() => { cargar() }, [])
 
@@ -127,6 +128,76 @@ export default function PlantillasEmail() {
         title="Plantillas de email"
         subtitle="Edita los correos automáticos que se envían a storekeepers y admin"
       />
+
+      {/* Panel de ayuda — cómo funciona */}
+      <div className="surface mb-5 overflow-hidden">
+        <button
+          onClick={() => setAyudaAbierta(v => !v)}
+          className="w-full flex items-center justify-between gap-3 px-5 py-3 hover:bg-bg-elevated/50 transition-colors text-left"
+          title={ayudaAbierta ? 'Ocultar ayuda' : 'Mostrar ayuda'}
+        >
+          <div className="flex items-center gap-2">
+            <HelpCircle className="w-4 h-4 text-accent" />
+            <span className="font-display font-bold text-sm">Cómo funciona esta sección</span>
+          </div>
+          {ayudaAbierta ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </button>
+
+        {ayudaAbierta && (
+          <div className="px-5 pb-5 pt-1 space-y-4 text-sm text-slate-300 border-t border-bg-border/60">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-accent/5 border border-accent/20 rounded-lg p-3">
+                <div className="font-semibold text-slate-100 mb-1 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-accent" /> Las 4 plantillas ya están instaladas y activas
+                </div>
+                <p className="text-xs leading-relaxed text-slate-400">
+                  No tienes que activar nada. Las 4 plantillas que ves a la izquierda están <strong>activas por defecto</strong> y el sistema las usa automáticamente en los momentos indicados. Sólo desactiva el toggle <em>"Activa"</em> si quieres <strong>silenciar</strong> ese tipo de email concreto.
+                </p>
+              </div>
+              <div className="bg-success/5 border border-success/20 rounded-lg p-3">
+                <div className="font-semibold text-slate-100 mb-1 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-success" /> Las variables <code className="font-mono text-success">{'{{...}}'}</code> son seguras
+                </div>
+                <p className="text-xs leading-relaxed text-slate-400">
+                  Son <strong>huecos que se rellenan solos</strong> cuando se envía el email. Por ejemplo, <code className="font-mono text-success">{'{{titulo_tarea}}'}</code> se sustituye por el título real de la tarea. <strong>No tienes que rellenarlas tú</strong>. Puedes dejarlas, moverlas, borrarlas o añadir nuevas — sin riesgo.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div className="font-semibold text-slate-100 mb-2">Qué hace cada plantilla:</div>
+              <div className="grid md:grid-cols-2 gap-2 text-xs">
+                <div className="border border-bg-border rounded p-2.5">
+                  <div className="font-mono text-accent">📅 Recordatorio 24h antes</div>
+                  <div className="text-slate-400 mt-1">Aviso amistoso al storekeeper el día anterior al vencimiento.</div>
+                </div>
+                <div className="border border-bg-border rounded p-2.5">
+                  <div className="font-mono text-accent">⏰ Aviso el mismo día</div>
+                  <div className="text-slate-400 mt-1">Recordatorio urgente unas horas antes del límite.</div>
+                </div>
+                <div className="border border-bg-border rounded p-2.5">
+                  <div className="font-mono text-warn">⚠️ Vencida 24h sin hacer</div>
+                  <div className="text-slate-400 mt-1">Tarea atrasada — se avisa al storekeeper con copia al admin.</div>
+                </div>
+                <div className="border border-bg-border rounded p-2.5">
+                  <div className="font-mono text-danger">🚨 Escalado al admin 48h</div>
+                  <div className="text-slate-400 mt-1">Si tras 48h sigue sin hacerse, sólo el admin recibe este aviso.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-bg-elevated/40 rounded-lg p-3 text-xs">
+              <div className="font-semibold text-slate-100 mb-1">Pasos típicos para editar una plantilla:</div>
+              <ol className="list-decimal list-inside space-y-1 text-slate-400 leading-relaxed">
+                <li>Pulsa la plantilla en la lista de la izquierda.</li>
+                <li>Pestaña <strong>Vista previa</strong>: ves cómo lo recibe el destinatario (con datos de ejemplo).</li>
+                <li>Pestaña <strong>HTML</strong>: edita el texto, mantén las <code className="font-mono text-accent">{'{{variables}}'}</code> que quieras conservar.</li>
+                <li>Pulsa <strong>Guardar cambios</strong>. Listo — el siguiente envío usará tu nueva versión.</li>
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-[260px_1fr] gap-6">
         {/* Sidebar con tipos */}
