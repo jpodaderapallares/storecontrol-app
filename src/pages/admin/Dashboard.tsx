@@ -18,12 +18,18 @@ interface BaseStats {
   completadas_semana: number
   pendientes_hoy: number
   vencidas: number
-  cumplimiento: number
+  /** null = la base no tiene tareas activas esta semana (no es ni 100% ni 0%) */
+  cumplimiento: number | null
 }
 
 export default function Dashboard() {
   const [bases, setBases] = useState<BaseStats[]>([])
-  const [kpi, setKpi] = useState({ bases: 0, cumplimientoHoy: 0, vencidas: 0, inactivos: 0 })
+  const [kpi, setKpi] = useState<{
+    bases: number
+    cumplimientoHoy: number | null
+    vencidas: number
+    inactivos: number
+  }>({ bases: 0, cumplimientoHoy: null, vencidas: 0, inactivos: 0 })
   const [actividad, setActividad] = useState<any[]>([])
   const [freqMes, setFreqMes] = useState<any[]>([])
   const [peoresBases, setPeoresBases] = useState<BaseStats[]>([])
@@ -70,16 +76,27 @@ export default function Dashboard() {
         completadas_semana: completadas,
         pendientes_hoy: pendHoy,
         vencidas,
-        cumplimiento: total > 0 ? Math.round((completadas / total) * 100) : 100,
+        // Si no hay tareas activas en la semana, cumplimiento = null ("sin tareas")
+        // para no inflar el panel con falsos 100%.
+        cumplimiento: total > 0 ? Math.round((completadas / total) * 100) : null,
       }
     })
     setBases(stats)
-    setPeoresBases([...stats].sort((a,b) => a.cumplimiento - b.cumplimiento).slice(0, 5))
+    // Peores bases: solo se rankean las que SÍ tienen tareas asignadas esta semana
+    setPeoresBases(
+      stats
+        .filter(s => s.cumplimiento !== null)
+        .sort((a, b) => (a.cumplimiento ?? 0) - (b.cumplimiento ?? 0))
+        .slice(0, 5),
+    )
 
     // KPIs — excluir desasignadas
     const instHoyEfectivas = instHoy.filter(i => i.estado !== 'desasignada')
     const completadasHoy = instHoyEfectivas.filter(i => i.estado === 'completada').length
-    const cumplimientoHoy = instHoyEfectivas.length > 0 ? Math.round((completadasHoy / instHoyEfectivas.length) * 100) : 100
+    const cumplimientoHoy: number | null =
+      instHoyEfectivas.length > 0
+        ? Math.round((completadasHoy / instHoyEfectivas.length) * 100)
+        : null
     const vencidasTot = instSemana.filter(i => i.estado === 'vencida').length
     const usuarios = usuariosQ.data ?? []
     const hace24h = new Date(Date.now() - 24*3600*1000)
@@ -127,9 +144,17 @@ export default function Dashboard() {
         <KpiCard
           icon={CheckCircle2}
           label="Cumplimiento hoy"
-          value={`${kpi.cumplimientoHoy}%`}
-          color={colorCumplimiento(kpi.cumplimientoHoy).text}
-          sub="tareas diarias completadas"
+          value={kpi.cumplimientoHoy === null ? '—' : `${kpi.cumplimientoHoy}%`}
+          color={
+            kpi.cumplimientoHoy === null
+              ? 'text-slate-400'
+              : colorCumplimiento(kpi.cumplimientoHoy).text
+          }
+          sub={
+            kpi.cumplimientoHoy === null
+              ? 'sin tareas hoy'
+              : 'tareas diarias completadas'
+          }
         />
         <KpiCard
           icon={AlertTriangle}
@@ -194,12 +219,16 @@ export default function Dashboard() {
                     <span className="iata text-lg">{s.base.codigo_iata}</span>
                     <span className="text-xs text-slate-500 font-mono">{s.base.nombre_completo.split(' ')[0]}</span>
                   </div>
-                  <span className={clsx('pill', colorCumplimiento(s.cumplimiento).badge)}>
-                    {s.cumplimiento}%
+                  <span className={clsx('pill', colorCumplimiento(s.cumplimiento ?? 0).badge)}>
+                    {s.cumplimiento ?? 0}%
                   </span>
                 </div>
               ))}
-              {peoresBases.length === 0 && <div className="text-xs text-slate-500">Sin datos</div>}
+              {peoresBases.length === 0 && (
+                <div className="text-xs text-slate-500">
+                  Sin datos: ninguna base tiene tareas asignadas todavía.
+                </div>
+              )}
             </div>
           </div>
 
@@ -234,7 +263,12 @@ function KpiCard({ icon: Icon, label, value, color, sub }: any) {
 }
 
 function BaseTile({ s }: { s: BaseStats }) {
-  const c = colorCumplimiento(s.cumplimiento)
+  // Si la base no tiene tareas activas esta semana, mostramos un estado neutral
+  // (gris, "sin tareas") en lugar de inflar el panel con un falso 100%.
+  const sinTareas = s.cumplimiento === null
+  const c = sinTareas
+    ? { text: 'text-slate-500', bg: 'bg-slate-600', badge: 'pill-muted' }
+    : colorCumplimiento(s.cumplimiento as number)
   return (
     <Link
       to={`/admin/base/${s.base.codigo_iata}`}
@@ -247,9 +281,15 @@ function BaseTile({ s }: { s: BaseStats }) {
       <div className="text-[11px] text-slate-500 font-mono truncate mb-3">
         {s.base.nombre_completo}
       </div>
-      <ProgressBar pct={s.cumplimiento} />
+      {sinTareas ? (
+        <div className="h-1.5 rounded-full bg-slate-800/60" />
+      ) : (
+        <ProgressBar pct={s.cumplimiento as number} />
+      )}
       <div className="flex items-center justify-between mt-3 text-[11px] font-mono">
-        <span className={c.text}>{s.cumplimiento}%</span>
+        <span className={c.text}>
+          {sinTareas ? 'sin tareas' : `${s.cumplimiento}%`}
+        </span>
         <div className="flex gap-2 text-slate-500">
           <span>✓{s.completadas_semana}</span>
           <span>⏳{s.pendientes_hoy}</span>
