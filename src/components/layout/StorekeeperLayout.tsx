@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/stores/authStore'
-import { ShieldCheck, LogOut, BookOpen } from 'lucide-react'
+import { ShieldCheck, LogOut, BookOpen, QrCode } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -44,6 +44,13 @@ export default function StorekeeperLayout() {
             className="btn-secondary"
           >
             <BookOpen className="w-4 h-4" /> Biblioteca BT
+          </Link>
+
+          <Link
+            to={`/base/${base?.codigo_iata}/qr`}
+            className="btn-secondary"
+          >
+            <QrCode className="w-4 h-4" /> Generar QR
           </Link>
 
           <button onClick={doLogout} className="btn-ghost" title="Cerrar sesión">

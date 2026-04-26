@@ -16,6 +16,8 @@ import Config from './pages/admin/Config'
 import PlantillasEmail from './pages/admin/PlantillasEmail'
 import StorekeeperHome from './pages/storekeeper/Home'
 import StorekeeperBiblioteca from './pages/storekeeper/Biblioteca'
+import StorekeeperQR from './pages/storekeeper/QR'
+import QrRedirect from './pages/qr/QrRedirect'
 
 export default function App() {
   const { usuario, cargando, inicializar } = useAuth()
@@ -32,6 +34,8 @@ export default function App() {
   if (!usuario) {
     return (
       <Routes>
+        {/* Ruta pública de redirección QR — accesible sin sesión. */}
+        <Route path="/qr/:slug" element={<QrRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
@@ -41,6 +45,8 @@ export default function App() {
   if (usuario.rol === 'admin') {
     return (
       <Routes>
+        {/* Ruta pública de redirección QR — fuera del layout admin. */}
+        <Route path="/qr/:slug" element={<QrRedirect />} />
         <Route element={<AdminLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin/base/:codigo" element={<BaseDetail />} />
@@ -61,9 +67,13 @@ export default function App() {
   // Storekeeper
   return (
     <Routes>
+      {/* Ruta pública de redirección QR — fuera del layout de storekeeper para
+          que también funcione si un storekeeper escanea su propio QR. */}
+      <Route path="/qr/:slug" element={<QrRedirect />} />
       <Route element={<StorekeeperLayout />}>
         <Route path="/base/:codigo" element={<StorekeeperHome />} />
         <Route path="/base/:codigo/biblioteca" element={<StorekeeperBiblioteca />} />
+        <Route path="/base/:codigo/qr" element={<StorekeeperQR />} />
         <Route path="*" element={<Navigate to={`/base/${useAuth.getState().base?.codigo_iata ?? 'PMI'}`} replace />} />
       </Route>
     </Routes>

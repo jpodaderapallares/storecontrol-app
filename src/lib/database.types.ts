@@ -166,6 +166,24 @@ export interface RecordatorioConsolidado {
   created_at: string
 }
 
+// === Módulo QR (independiente del resto de StoreControl) ===
+export interface DocumentoQR {
+  id: string
+  propietario_id: string
+  base_id: string
+  slug: string
+  filename: string
+  size_bytes: number
+  content_type: string
+  storage_path: string
+  qr_path: string | null
+  expires_at: string | null
+  downloads: number
+  notes: string | null
+  created_at: string
+  deleted_at: string | null
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -185,6 +203,7 @@ export type Database = {
       asignaciones_formatos: { Row: AsignacionFormato; Insert: Partial<AsignacionFormato>; Update: Partial<AsignacionFormato> }
       recordatorios_consolidados: { Row: RecordatorioConsolidado; Insert: Partial<RecordatorioConsolidado>; Update: Partial<RecordatorioConsolidado> }
       plantillas_email: { Row: PlantillaEmail; Insert: Partial<PlantillaEmail>; Update: Partial<PlantillaEmail> }
+      documentos_qr: { Row: DocumentoQR; Insert: Partial<DocumentoQR>; Update: Partial<DocumentoQR> }
     }
   }
 }
