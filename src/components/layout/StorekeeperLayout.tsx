@@ -3,14 +3,24 @@ import { useState } from 'react'
 import { useAuth } from '@/stores/authStore'
 import { ShieldCheck, LogOut, BookOpen, QrCode, Home, ChevronLeft } from 'lucide-react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es, enGB, pl } from 'date-fns/locale'
 import clsx from 'clsx'
+import { useT } from '@/lib/i18n'
+import LangSelector from '@/components/ui/LangSelector'
+
+const dateLocaleMap = { es, en: enGB, pl } as const
+const dateFormatByLang = {
+  es: "EEEE d 'de' MMMM yyyy",
+  en: 'EEEE d MMMM yyyy',
+  pl: 'EEEE d MMMM yyyy',
+} as const
 
 export default function StorekeeperLayout() {
   const { usuario, base, logout } = useAuth()
   const nav = useNavigate()
   const location = useLocation()
-  const hoy = format(new Date(), "EEEE d 'de' MMMM yyyy", { locale: es })
+  const { t, lang } = useT()
+  const hoy = format(new Date(), dateFormatByLang[lang], { locale: dateLocaleMap[lang] })
   const [logoOk, setLogoOk] = useState(true)
 
   async function doLogout() { await logout(); nav('/login') }
@@ -27,14 +37,14 @@ export default function StorekeeperLayout() {
           <Link
             to={inicioPath}
             className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-            title="Volver al inicio"
+            title={t('layout.back_to_home')}
           >
             <div className="w-10 h-10 rounded-lg bg-accent grid place-items-center shadow-sm">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="font-display text-xl font-extrabold leading-none">StoreControl</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-0.5">HLA · Part 145</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5">{t('layout.tagline')}</div>
             </div>
             {logoOk && (
               <img
@@ -48,7 +58,7 @@ export default function StorekeeperLayout() {
 
           <div className="h-10 w-px bg-bg-border mx-1" />
 
-          <Link to={inicioPath} className="hover:opacity-90 transition-opacity" title="Volver al inicio">
+          <Link to={inicioPath} className="hover:opacity-90 transition-opacity" title={t('layout.back_to_home')}>
             <div className="iata text-2xl">{base?.codigo_iata ?? '—'}</div>
             <div className="text-xs text-slate-400 font-mono">{base?.nombre_completo}</div>
           </Link>
@@ -57,30 +67,32 @@ export default function StorekeeperLayout() {
 
           {/* Navegación principal con estado activo */}
           <nav className="flex items-center gap-1.5">
-            <NavTab to={inicioPath} icon={Home} label="Inicio" tooltip="Tareas de tu base" end />
+            <NavTab to={inicioPath} icon={Home} label={t('nav.home')} tooltip={t('nav.home_tooltip')} end />
             <NavTab
               to={`${inicioPath}/biblioteca`}
               icon={BookOpen}
-              label="Biblioteca BT"
-              tooltip="Procedimientos técnicos y notices"
+              label={t('nav.library')}
+              tooltip={t('nav.library_tooltip')}
             />
             <NavTab
               to={`${inicioPath}/qr`}
               icon={QrCode}
-              label="Generar QR"
-              tooltip="Crear QR de un documento de herramientas"
+              label={t('nav.qr')}
+              tooltip={t('nav.qr_tooltip')}
             />
           </nav>
 
           <div className="h-10 w-px bg-bg-border mx-1" />
+
+          <LangSelector variant="header" />
 
           <div className="text-right">
             <div className="text-sm font-medium" title={usuario?.email}>{usuario?.nombre}</div>
             <div className="text-[11px] text-slate-500 font-mono capitalize">{hoy}</div>
           </div>
 
-          <button onClick={doLogout} className="btn-ghost" title="Cerrar sesión">
-            <LogOut className="w-4 h-4" /> Salir
+          <button onClick={doLogout} className="btn-ghost" title={t('layout.logout')}>
+            <LogOut className="w-4 h-4" /> {t('layout.exit')}
           </button>
         </div>
 
@@ -90,10 +102,10 @@ export default function StorekeeperLayout() {
             <Link
               to={inicioPath}
               className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-accent transition-colors font-mono"
-              title="Volver al inicio"
+              title={t('layout.back_to_home')}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-              Volver al inicio · {base?.codigo_iata}
+              {t('layout.back_to_home')} · {base?.codigo_iata}
             </Link>
           </div>
         )}

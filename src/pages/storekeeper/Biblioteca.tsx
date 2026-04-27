@@ -4,10 +4,12 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { BookOpen, Download, Search, FileText } from 'lucide-react'
 import type { BibliotecaDoc } from '@/lib/database.types'
 import { fmtDate } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 
 const CATEGORIAS = ['Todas', 'Recepción', 'Inventario', 'Almacenamiento', 'Expedición', 'Seguridad', 'CAMO', 'Herramientas', 'Materiales Peligrosos']
 
 export default function StorekeeperBiblioteca() {
+  const { t } = useT()
   const [docs, setDocs] = useState<BibliotecaDoc[]>([])
   const [cat, setCat] = useState('Todas')
   const [q, setQ] = useState('')
@@ -42,8 +44,8 @@ export default function StorekeeperBiblioteca() {
   return (
     <>
       <PageHeader
-        title="Biblioteca técnica"
-        subtitle="Procedimientos, notices y training de Logística HLA"
+        title={t('lib.title')}
+        subtitle={t('lib.subtitle')}
       />
 
       <div className="surface p-4 mb-6 flex gap-3 items-center">
@@ -51,7 +53,7 @@ export default function StorekeeperBiblioteca() {
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             className="input w-full pl-9"
-            placeholder="Buscar por título o referencia (p.ej. LOGN_22_01)…"
+            placeholder={t('lib.search_placeholder')}
             value={q}
             onChange={e => setQ(e.target.value)}
           />
@@ -73,7 +75,7 @@ export default function StorekeeperBiblioteca() {
         </div>
       </div>
 
-      {loading && <div className="text-slate-500 text-sm">Cargando…</div>}
+      {loading && <div className="text-slate-500 text-sm">{t('common.loading')}</div>}
 
       <div className="grid grid-cols-3 gap-4">
         {filtrados.map(d => (
@@ -92,7 +94,7 @@ export default function StorekeeperBiblioteca() {
             </div>
             <div className="flex gap-2">
               <button className="btn-secondary flex-1" onClick={() => verPdf(d)}>
-                <BookOpen className="w-4 h-4" /> Ver PDF
+                <BookOpen className="w-4 h-4" /> {t('lib.preview')}
               </button>
             </div>
           </div>
@@ -100,7 +102,7 @@ export default function StorekeeperBiblioteca() {
       </div>
       {filtrados.length === 0 && !loading && (
         <div className="surface p-6 text-center text-sm text-slate-500">
-          No hay procedimientos que coincidan con los filtros.
+          {t('lib.no_results')}
         </div>
       )}
     </>

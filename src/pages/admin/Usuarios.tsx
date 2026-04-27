@@ -97,20 +97,47 @@ function FormUsuario({ usuario, bases, onClose }: { usuario: Usuario | null; bas
   const [baseId, setBaseId] = useState(usuario?.base_id ?? '')
   const [activo, setActivo] = useState(usuario?.activo ?? true)
   const [password, setPassword] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function guardar() {
-    if (usuario) {
-      await supabase.from('usuarios').update({
-        nombre, rol, base_id: baseId || null, activo,
-      }).eq('id', usuario.id)
-      await logAccion('usuario_modificado', 'usuarios', usuario.id, { nombre, rol })
-    } else {
-      // En producción, crear el usuario vía Edge Function con service role (auth.admin.createUser)
-      // y enviar email de bienvenida vía Resend.
-      alert('En producción: llamar a Edge Function supabase/functions/crear-usuario\n' +
-            '(usa SUPABASE_SERVICE_ROLE_KEY + Resend para email de bienvenida)')
+    setError(null)
+    if (!nombre.trim() || !email.trim()) {
+      setError('Nombre y email son obligatorios.')
+      return
     }
-    onClose()
+    setGuardando(true)
+    try {
+      if (usuario) {
+        const { error: errUpd } = await supabase.from('usuarios').update({
+          nombre, rol, base_id: baseId || null, activo,
+        }).eq('id', usuario.id)
+        if (errUpd) throw errUpd
+        await logAccion('usuario_modificado', 'usuarios', usuario.id, { nombre, rol })
+      } else {
+        if (!password || password.length < 6) {
+          throw new Error('La contraseña temporal debe tener al menos 6 caracteres.')
+        }
+        // Llamada a la Edge Function crear-usuario (service role + Resend)
+        const { data, error: errFn } = await supabase.functions.invoke('crear-usuario', {
+          body: {
+            nombre: nombre.trim(),
+            email: email.trim().toLowerCase(),
+            rol,
+            base_id: rol === 'storekeeper' ? (baseId || null) : null,
+            password,
+          },
+        })
+        if (errFn) throw errFn
+        if (data && data.ok === false) throw new Error(data.error ?? 'Error al crear usuario')
+      }
+      setGuardando(false)
+      onClose()
+    } catch (e: any) {
+      setGuardando(false)
+      const msg = e?.message ?? String(e)
+      setError(msg)
+    }
   }
 
   return (
@@ -160,9 +187,16 @@ function FormUsuario({ usuario, bases, onClose }: { usuario: Usuario | null; bas
             <span className="text-sm">Activo</span>
           </label>
         </div>
+        {error && (
+          <div className="mt-4 p-3 rounded-lg bg-danger/10 border border-danger/30 text-xs text-danger">
+            {error}
+          </div>
+        )}
         <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-bg-border">
-          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn-primary" onClick={guardar}>Guardar</button>
+          <button className="btn-ghost" onClick={onClose} disabled={guardando}>Cancelar</button>
+          <button className="btn-primary" onClick={guardar} disabled={guardando}>
+            {guardando ? (usuario ? 'Guardando…' : 'Creando usuario…') : 'Guardar'}
+          </button>
         </div>
       </div>
     </div>

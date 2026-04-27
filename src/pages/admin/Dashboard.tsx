@@ -12,6 +12,19 @@ import { fmtRelativa, colorCumplimiento } from '@/lib/format'
 import type { Base } from '@/lib/database.types'
 import clsx from 'clsx'
 
+/**
+ * Devuelve YYYY-MM-DD en hora LOCAL (no UTC).
+ * d.toISOString().slice(0,10) usa UTC, lo que en zonas con offset positivo
+ * (Madrid UTC+1/+2) hace que a las 00:00 locales devuelva el día anterior,
+ * provocando que tareas de ayer aparezcan como "hoy" en el dashboard.
+ */
+function fechaLocalISO(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
 interface BaseStats {
   base: Base
   total_semana: number
@@ -51,15 +64,19 @@ export default function Dashboard() {
     const finHoy = new Date(hoy); finHoy.setHours(23,59,59,999)
     const inicioHoy = new Date(hoy); inicioHoy.setHours(0,0,0,0)
 
+    // CRÍTICO: usar fecha LOCAL, no toISOString() (UTC) — ver fechaLocalISO arriba.
+    // Antes, en Madrid UTC+2, las 00:00 locales daban "ayer" como "hoy" en el filtro.
+    const hoyISO = fechaLocalISO(hoy)
+    const inicioSemanaISO = fechaLocalISO(inicioSemana)
+
     const [basesQ, instanciasSemana, instanciasHoy, usuariosQ, audits] = await Promise.all([
       supabase.from('bases').select('*').eq('activo', true).order('codigo_iata'),
       supabase.from('tareas_instancia')
         .select('*, tareas_plantilla(frecuencia)')
-        .gte('fecha_asignada', inicioSemana.toISOString().slice(0,10)),
+        .gte('fecha_asignada', inicioSemanaISO),
       supabase.from('tareas_instancia')
         .select('id, estado')
-        .gte('fecha_asignada', inicioHoy.toISOString().slice(0,10))
-        .lte('fecha_asignada', finHoy.toISOString().slice(0,10)),
+        .eq('fecha_asignada', hoyISO),
       supabase.from('usuarios').select('id, rol, ultimo_login').eq('rol', 'storekeeper'),
       supabase.from('audit_log').select('*').order('timestamp', { ascending: false }).limit(8),
     ])
@@ -110,9 +127,11 @@ export default function Dashboard() {
 
     setKpi({ bases: basesList.length, cumplimientoHoy, vencidas: vencidasTot, inactivos })
 
-    // Por frecuencia (mes) — excluir desasignadas
+    // Por frecuencia (mes) — excluir desasignadas. Comparamos strings YYYY-MM-DD
+    // para evitar el sesgo de zona horaria (new Date('YYYY-MM-DD') interpreta UTC).
+    const inicioMesISO = fechaLocalISO(inicioMes)
     const instMes = instSemana.filter(i =>
-      new Date(i.fecha_asignada) >= inicioMes && i.estado !== 'desasignada',
+      (i.fecha_asignada as string) >= inicioMesISO && i.estado !== 'desasignada',
     )
     const freq: Record<string, { total: number; done: number }> = {}
     for (const i of instMes) {

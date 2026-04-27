@@ -14,6 +14,7 @@ import { useAuth } from '@/stores/authStore'
 import { PageHeader } from '@/components/ui/PageHeader'
 import type { DocumentoQR } from '@/lib/database.types'
 import { fmtDate } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 
 // Bucket privado para los documentos del módulo QR.
 const BUCKET = 'tooling_qr'
@@ -54,6 +55,7 @@ function urlPublicaQR(slug: string): string {
 type Tab = 'activos' | 'papelera'
 
 export default function StorekeeperQR() {
+  const { t } = useT()
   const { usuario, base } = useAuth()
   const [docs, setDocs] = useState<DocumentoQR[]>([])
   const [loading, setLoading] = useState(true)
@@ -171,7 +173,7 @@ export default function StorekeeperQR() {
 
   // ---------- Papelera ----------
   async function moverAPapelera(d: DocumentoQR) {
-    if (!confirm(`¿Mover "${d.filename}" a la papelera?\n(Se purgará definitivamente a los 30 días.)`)) return
+    if (!confirm(`"${d.filename}"\n\n${t('qr.confirm_trash')}`)) return
     const { error } = await supabase
       .from('documentos_qr')
       .update({ deleted_at: new Date().toISOString() })
@@ -198,7 +200,7 @@ export default function StorekeeperQR() {
   }
 
   async function eliminarDefinitivo(d: DocumentoQR) {
-    if (!confirm(`Eliminar "${d.filename}" definitivamente. ¿Estás seguro?\nEsta acción no se puede deshacer.`)) return
+    if (!confirm(`"${d.filename}"\n\n${t('qr.confirm_delete_perm')}`)) return
     // 1) Borrar storage (objeto + posible qr.png)
     const paths = [d.storage_path]
     if (d.qr_path) paths.push(d.qr_path)
@@ -240,8 +242,8 @@ export default function StorekeeperQR() {
   return (
     <>
       <PageHeader
-        title="Generar QR"
-        subtitle="Sube un documento de herramientas y obtén un QR para imprimir o compartir."
+        title={t('qr.title')}
+        subtitle={t('qr.subtitle')}
       />
 
       {/* Pestañas */}
@@ -255,7 +257,7 @@ export default function StorekeeperQR() {
           }`}
         >
           <span className="inline-flex items-center gap-2">
-            <QrCode className="w-4 h-4" /> Activos
+            <QrCode className="w-4 h-4" /> {t('qr.tab_active')}
           </span>
         </button>
         <button
@@ -267,7 +269,7 @@ export default function StorekeeperQR() {
           }`}
         >
           <span className="inline-flex items-center gap-2">
-            <Trash2 className="w-4 h-4" /> Papelera
+            <Trash2 className="w-4 h-4" /> {t('qr.tab_trash')}
           </span>
         </button>
 
@@ -277,7 +279,7 @@ export default function StorekeeperQR() {
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             className="input w-full pl-9"
-            placeholder="Buscar por nombre, slug o nota…"
+            placeholder={t('qr.search_placeholder')}
             value={q}
             onChange={e => setQ(e.target.value)}
           />
@@ -286,7 +288,7 @@ export default function StorekeeperQR() {
 
       {/* Dropzone (solo en pestaña Activos) */}
       {tab === 'activos' && (
-        <DropzoneArea onDrop={onDrop} subiendo={subiendo} progresoArchivo={progresoArchivo} />
+        <DropzoneArea t={t} onDrop={onDrop} subiendo={subiendo} progresoArchivo={progresoArchivo} />
       )}
 
       {/* Mensajes */}
@@ -303,27 +305,25 @@ export default function StorekeeperQR() {
       {/* Lista */}
       {loading ? (
         <div className="surface p-8 text-center text-sm text-slate-500">
-          <Loader2 className="w-4 h-4 inline animate-spin mr-2" /> Cargando…
+          <Loader2 className="w-4 h-4 inline animate-spin mr-2" /> {t('common.loading')}
         </div>
       ) : filtrados.length === 0 ? (
         <div className="surface p-8 text-center text-sm text-slate-500">
-          {tab === 'activos'
-            ? 'No hay documentos QR activos. Arrastra un PDF o imagen arriba para empezar.'
-            : 'La papelera está vacía. Los documentos se purgan automáticamente a los 30 días.'}
+          {tab === 'activos' ? t('qr.empty_active') : t('qr.empty_trash')}
         </div>
       ) : (
         <div className="surface overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-bg-elevated text-slate-400 text-xs uppercase tracking-wider">
               <tr>
-                <th className="text-left px-4 py-3 font-medium">Documento</th>
-                <th className="text-left px-4 py-3 font-medium">Slug</th>
-                <th className="text-right px-4 py-3 font-medium">Tamaño</th>
-                <th className="text-right px-4 py-3 font-medium">Descargas</th>
+                <th className="text-left px-4 py-3 font-medium">{t('qr.col_document')}</th>
+                <th className="text-left px-4 py-3 font-medium">{t('qr.col_slug')}</th>
+                <th className="text-right px-4 py-3 font-medium">{t('qr.col_size')}</th>
+                <th className="text-right px-4 py-3 font-medium">{t('qr.col_downloads')}</th>
                 <th className="text-left px-4 py-3 font-medium">
-                  {tab === 'activos' ? 'Subido' : 'Borrado'}
+                  {tab === 'activos' ? t('qr.col_uploaded') : t('qr.col_deleted')}
                 </th>
-                <th className="text-right px-4 py-3 font-medium">Acciones</th>
+                <th className="text-right px-4 py-3 font-medium">{t('qr.col_actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -359,21 +359,21 @@ export default function StorekeeperQR() {
                       <div className="flex justify-end gap-1">
                         <button
                           className="btn-ghost px-2 py-1.5"
-                          title="Ver QR"
+                          title={t('qr.action_view_qr')}
                           onClick={() => setQrAbierto(d)}
                         >
                           <QrCode className="w-4 h-4" />
                         </button>
                         <button
                           className="btn-ghost px-2 py-1.5"
-                          title="Abrir documento"
+                          title={t('qr.action_open_doc')}
                           onClick={() => abrirDocumento(d)}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           className="btn-ghost px-2 py-1.5 text-danger"
-                          title="Mover a papelera"
+                          title={t('qr.delete')}
                           onClick={() => moverAPapelera(d)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -383,14 +383,14 @@ export default function StorekeeperQR() {
                       <div className="flex justify-end gap-1">
                         <button
                           className="btn-ghost px-2 py-1.5"
-                          title="Restaurar"
+                          title={t('qr.action_restore')}
                           onClick={() => restaurar(d)}
                         >
                           <RotateCcw className="w-4 h-4" />
                         </button>
                         <button
                           className="btn-ghost px-2 py-1.5 text-danger"
-                          title="Eliminar definitivamente"
+                          title={t('qr.action_delete_perm')}
                           onClick={() => eliminarDefinitivo(d)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -407,7 +407,7 @@ export default function StorekeeperQR() {
 
       {/* Modal QR */}
       {qrAbierto && (
-        <QrModal doc={qrAbierto} onClose={() => setQrAbierto(null)} />
+        <QrModal t={t} doc={qrAbierto} onClose={() => setQrAbierto(null)} />
       )}
     </>
   )
@@ -417,8 +417,13 @@ export default function StorekeeperQR() {
 //  Dropzone
 // ============================================================
 function DropzoneArea({
-  onDrop, subiendo, progresoArchivo,
-}: { onDrop: (files: File[]) => void; subiendo: boolean; progresoArchivo: string | null }) {
+  t, onDrop, subiendo, progresoArchivo,
+}: {
+  t: (key: string) => string
+  onDrop: (files: File[]) => void
+  subiendo: boolean
+  progresoArchivo: string | null
+}) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPT,
@@ -438,15 +443,15 @@ function DropzoneArea({
       {subiendo ? (
         <div className="text-slate-300 text-sm">
           <Loader2 className="w-4 h-4 inline animate-spin mr-2" />
-          Subiendo {progresoArchivo ?? 'archivo'}…
+          {t('qr.uploading')} {progresoArchivo ?? '…'}
         </div>
       ) : (
         <>
           <div className="font-medium">
-            {isDragActive ? 'Suelta el archivo aquí' : 'Arrastra un PDF o imagen, o haz clic para elegir'}
+            {isDragActive ? t('qr.drop_here') : t('qr.drop_hint')}
           </div>
           <div className="text-xs text-slate-500 font-mono mt-1">
-            PDF · PNG · JPG · WebP — máximo 50 MB por archivo
+            {t('qr.size_hint')}
           </div>
         </>
       )}
@@ -457,7 +462,7 @@ function DropzoneArea({
 // ============================================================
 //  Modal QR (preview + descargar PNG + copiar URL)
 // ============================================================
-function QrModal({ doc, onClose }: { doc: DocumentoQR; onClose: () => void }) {
+function QrModal({ t, doc, onClose }: { t: (key: string) => string; doc: DocumentoQR; onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [copiado, setCopiado] = useState(false)
   const url = urlPublicaQR(doc.slug)
@@ -521,10 +526,10 @@ function QrModal({ doc, onClose }: { doc: DocumentoQR; onClose: () => void }) {
         <div className="flex gap-2">
           <button className="btn-secondary flex-1" onClick={copiarUrl}>
             {copiado ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-            {copiado ? 'Copiado' : 'Copiar URL'}
+            {copiado ? t('qr.copied') : t('qr.copy_url')}
           </button>
           <button className="btn-primary flex-1" onClick={descargarPng}>
-            <Download className="w-4 h-4" /> Descargar PNG
+            <Download className="w-4 h-4" /> {t('qr.download_png')}
           </button>
         </div>
       </div>

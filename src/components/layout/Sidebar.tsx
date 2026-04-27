@@ -5,6 +5,7 @@ import {
   LayoutDashboard, ListChecks, Users, Bell, BookOpen,
   FileClock, Settings, LogOut, ShieldCheck, FileText, Mail,
 } from 'lucide-react'
+import LangSelector from '@/components/ui/LangSelector'
 
 const items = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tooltip: 'Panel de control · estado operativo' },
@@ -71,7 +72,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="px-3 py-3 border-t">
+      <div className="px-3 py-3 border-t space-y-2">
+        <LangSelector variant="sidebar" />
         <div className="flex items-center gap-3 px-2 py-2">
           <div
             className="w-8 h-8 rounded-full bg-bg-elevated grid place-items-center text-xs font-bold"

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import type { TareaInstancia } from '@/lib/database.types'
+import { useT } from '@/lib/i18n'
 
 interface InstanciaExtendida extends TareaInstancia {
   tareas_plantilla?: any
@@ -36,10 +37,12 @@ function ordenarPorEstadoYFecha(arr: InstanciaExtendida[]): InstanciaExtendida[]
 
 export default function StorekeeperHome() {
   const { base } = useAuth()
+  const { t } = useT()
   const [instancias, setInstancias] = useState<InstanciaExtendida[]>([])
   const [loading, setLoading] = useState(true)
   const [procedimientos, setProcedimientos] = useState<any[]>([])
   const [mostrarCompletadas, setMostrarCompletadas] = useState(false)
+  const pendStr = (n: number) => `${n} ${n === 1 ? t('home.pending_one') : t('home.pending_many')}`
 
   useEffect(() => { cargar() }, [base?.id])
 
@@ -161,13 +164,13 @@ export default function StorekeeperHome() {
         )}
       </div>
 
-      {loading && <div className="text-slate-500 text-sm">Cargando tus tareas…</div>}
+      {loading && <div className="text-slate-500 text-sm">{t('home.loading_tasks')}</div>}
 
       {/* SECCIÓN URGENTE: Vencidas (sólo si hay) */}
       {vencidas.length > 0 && (
         <Seccion
-          titulo={`Vencidas · acción inmediata (${vencidas.length})`}
-          subtitulo="Tareas que han superado su fecha límite. Resuelve cuanto antes."
+          titulo={`${t('home.overdue_immediate')} (${vencidas.length})`}
+          subtitulo={t('home.overdue_subtitle')}
           icon={AlertTriangle}
           tono="danger"
         >
@@ -180,18 +183,18 @@ export default function StorekeeperHome() {
       {/* SECCIÓN HOY: pendientes primero, luego completadas (visualmente atenuadas) */}
       <Seccion
         titulo={totalHoy > 0
-          ? `Tareas de hoy · ${hoyPendientes.length} pendiente${hoyPendientes.length === 1 ? '' : 's'}`
-          : 'Tareas de hoy'}
-        subtitulo="Tareas diarias asignadas a tu base"
+          ? `${t('home.tasks_today')} · ${pendStr(hoyPendientes.length)}`
+          : t('home.tasks_today')}
+        subtitulo={t('home.tasks_today_subtitle')}
         icon={Clock}
         tono={hoyPendientes.length > 0 ? 'accent' : 'muted'}
       >
-        {totalHoy === 0 && <Vacio texto="No hay tareas diarias para hoy." />}
+        {totalHoy === 0 && <Vacio texto={t('home.no_daily_today')} />}
         {hoyPendientes.map(i => (
           <TareaCard key={i.id} inst={i} onUpdated={cargar} />
         ))}
         {hoyCompletadas.length > 0 && (
-          <BloqueCompletadas titulo={`Completadas hoy · ${hoyCompletadas.length}`}>
+          <BloqueCompletadas titulo={`${t('home.completed_today')} · ${hoyCompletadas.length}`}>
             {hoyCompletadas.map(i => (
               <TareaCard key={i.id} inst={i} onUpdated={cargar} compacta />
             ))}
@@ -201,12 +204,12 @@ export default function StorekeeperHome() {
 
       {/* SECCIÓN SEMANA: solo pendientes (las completadas se agrupan abajo) */}
       <Seccion
-        titulo={`Esta semana · ${semanaPend.length} pendiente${semanaPend.length === 1 ? '' : 's'}`}
-        subtitulo="Tareas semanales"
+        titulo={`${t('home.this_week')} · ${pendStr(semanaPend.length)}`}
+        subtitulo={t('home.this_week_subtitle')}
         icon={Calendar}
         tono="muted"
       >
-        {semanaPend.length === 0 && <Vacio texto="Sin tareas semanales pendientes." />}
+        {semanaPend.length === 0 && <Vacio texto={t('home.no_weekly_pending')} />}
         {semanaPend.map(i => (
           <TareaCard key={i.id} inst={i} onUpdated={cargar} contexto="semana" />
         ))}
@@ -214,12 +217,12 @@ export default function StorekeeperHome() {
 
       {/* SECCIÓN MES */}
       <Seccion
-        titulo={`Este mes · ${mesPend.length} pendiente${mesPend.length === 1 ? '' : 's'}`}
-        subtitulo="Tareas mensuales y periódicas"
+        titulo={`${t('home.this_month')} · ${pendStr(mesPend.length)}`}
+        subtitulo={t('home.this_month_subtitle')}
         icon={Calendar}
         tono="muted"
       >
-        {mesPend.length === 0 && <Vacio texto="Sin tareas mensuales pendientes." />}
+        {mesPend.length === 0 && <Vacio texto={t('home.no_monthly_pending')} />}
         {mesPend.map(i => (
           <TareaCard key={i.id} inst={i} onUpdated={cargar} contexto="mes" />
         ))}
@@ -232,12 +235,12 @@ export default function StorekeeperHome() {
             type="button"
             className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-bg-elevated border border-bg-border text-slate-300 hover:text-slate-100 hover:border-bg-border/80 transition-colors"
             onClick={() => setMostrarCompletadas(v => !v)}
-            title={mostrarCompletadas ? 'Ocultar completadas' : 'Mostrar completadas'}
+            title={mostrarCompletadas ? t('home.hide_completed') : t('home.see_completed')}
           >
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-success" />
               <span className="text-sm font-medium">
-                Completadas este mes
+                {t('home.completed_this_month')}
               </span>
               <span className="pill bg-success/15 text-success border border-success/30">
                 {completadasMes.length}
@@ -262,11 +265,11 @@ export default function StorekeeperHome() {
       <div className="surface p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="label">Acceso rápido</div>
-            <div className="font-display text-xl font-bold mt-1">Procedimientos más usados</div>
+            <div className="label">{t('home.quick_access')}</div>
+            <div className="font-display text-xl font-bold mt-1">{t('home.most_used_procedures')}</div>
           </div>
-          <Link to={`/base/${base?.codigo_iata}/biblioteca`} className="btn-ghost" title="Abrir biblioteca técnica">
-            <BookOpen className="w-4 h-4" /> Ver todos
+          <Link to={`/base/${base?.codigo_iata}/biblioteca`} className="btn-ghost" title={t('home.open_library')}>
+            <BookOpen className="w-4 h-4" /> {t('home.see_all')}
           </Link>
         </div>
         <div className="grid grid-cols-4 gap-3">
