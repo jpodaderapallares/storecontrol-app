@@ -4,7 +4,7 @@ import { supabase, logAccion } from '@/lib/supabase'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EstadoBadge } from '@/components/ui/Badge'
 import { fmtDateTime, fmtTime } from '@/lib/format'
-import { Download, FileText, ChevronRight, ChevronLeft, UserMinus, RotateCcw } from 'lucide-react'
+import { Download, FileText, ChevronRight, ChevronLeft, UserMinus, RotateCcw, Trash2, Loader2, RefreshCw } from 'lucide-react'
 import clsx from 'clsx'
 import type { Base, TareaInstancia, Usuario } from '@/lib/database.types'
 
@@ -17,6 +17,7 @@ export default function BaseDetail() {
   const [tab, setTab] = useState<Tab>('hoy')
   const [items, setItems] = useState<TareaInstancia[]>([])
   const [loading, setLoading] = useState(true)
+  const [limpiando, setLimpiando] = useState(false)
 
   useEffect(() => { cargarBase() }, [codigo])
   useEffect(() => { if (base) cargarItems() }, [base, tab])
@@ -93,6 +94,36 @@ export default function BaseDetail() {
     cargarItems()
   }
 
+  async function limpiarVencidasBase() {
+    if (!base) return
+    const vencidasCount = items.filter(i => i.estado === 'vencida').length
+    const aviso = vencidasCount === 0
+      ? 'No hay vencidas en este periodo. ¿Eliminar TODAS las vencidas históricas de ' + base.codigo_iata + '?'
+      : 'Vas a ELIMINAR todas las tareas vencidas de la base ' + base.codigo_iata + '. La auditoría no se ve afectada.\n\n¿Continuar?'
+    if (!confirm(aviso)) return
+    setLimpiando(true)
+    try {
+      const { error, count } = await supabase
+        .from('tareas_instancia')
+        .delete({ count: 'exact' })
+        .eq('base_id', base.id)
+        .eq('estado', 'vencida')
+      if (error) throw error
+      await logAccion('vencidas_purgadas', 'tareas_instancia', undefined, {
+        eliminadas: count ?? 0,
+        base_id: base.id,
+        base_iata: base.codigo_iata,
+        motivo: 'Limpieza por base',
+      })
+      alert('✓ ' + (count ?? 0) + ' vencidas eliminadas de ' + base.codigo_iata + '.')
+      await cargarItems()
+    } catch (e: any) {
+      alert('Error: ' + (e.message ?? e))
+    } finally {
+      setLimpiando(false)
+    }
+  }
+
   async function exportarInforme() {
     // Stub: en prod llamar a una Edge Function que genere un PDF con pdf-lib o Puppeteer.
     alert('Informe PDF generado (stub). En producción se descarga del backend.')
@@ -111,6 +142,19 @@ export default function BaseDetail() {
         actions={
           <>
             <Link to="/dashboard" className="btn-ghost"><ChevronLeft className="w-4 h-4" /> Volver</Link>
+            <button className="btn-ghost" onClick={cargarItems} disabled={loading} title="Actualizar">
+              <RefreshCw className={'w-4 h-4 ' + (loading ? 'animate-spin' : '')} /> Actualizar
+            </button>
+            <button
+              className="btn-secondary text-danger border-danger/40 hover:bg-danger/10"
+              onClick={limpiarVencidasBase}
+              disabled={limpiando}
+              title={'Eliminar todas las tareas vencidas de ' + (base?.codigo_iata ?? '')}
+            >
+              {limpiando
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Limpiando…</>
+                : <><Trash2 className="w-4 h-4" /> Limpiar vencidas</>}
+            </button>
             <button onClick={exportarInforme} className="btn-primary">
               <Download className="w-4 h-4" /> Exportar informe PDF
             </button>

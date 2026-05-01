@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/stores/authStore'
 import {
@@ -8,21 +9,36 @@ import {
 import LangSelector from '@/components/ui/LangSelector'
 
 const items = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tooltip: 'Panel de control · estado operativo' },
-  { to: '/tareas', label: 'Tareas', icon: ListChecks, tooltip: 'Gestión de plantillas de tareas' },
-  { to: '/usuarios', label: 'Usuarios', icon: Users, tooltip: 'Storekeepers y administradores' },
-  { to: '/formatos', label: 'Formatos', icon: FileText, tooltip: 'Plantillas en blanco (F005, F014…)' },
-  { to: '/alertas', label: 'Alertas', icon: Bell, tooltip: 'Reglas de notificación' },
-  { to: '/biblioteca', label: 'BT Biblioteca', icon: BookOpen, tooltip: 'Procedimientos técnicos · LOGN, LOGTRA…' },
-  { to: '/emails', label: 'Plantillas email', icon: Mail, tooltip: 'Plantillas de correo' },
-  { to: '/auditoria', label: 'Auditoría', icon: FileClock, tooltip: 'Registro completo de actividad' },
-  { to: '/config', label: 'Configuración', icon: Settings, tooltip: 'Ajustes generales' },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, key: 'dashboard', tooltip: 'Panel de control · estado operativo' },
+  { to: '/tareas', label: 'Tareas', icon: ListChecks, key: 'tareas', tooltip: 'Gestión de plantillas de tareas' },
+  { to: '/usuarios', label: 'Usuarios', icon: Users, key: 'usuarios', tooltip: 'Storekeepers y administradores' },
+  { to: '/formatos', label: 'Formatos', icon: FileText, key: 'formatos', tooltip: 'Plantillas en blanco (F005, F014…)' },
+  { to: '/alertas', label: 'Alertas', icon: Bell, key: 'alertas', tooltip: 'Tareas vencidas · recordatorios' },
+  { to: '/biblioteca', label: 'BT Biblioteca', icon: BookOpen, key: 'biblioteca', tooltip: 'Procedimientos técnicos · LOGN, LOGTRA…' },
+  { to: '/emails', label: 'Plantillas email', icon: Mail, key: 'emails', tooltip: 'Plantillas de correo' },
+  { to: '/auditoria', label: 'Auditoría', icon: FileClock, key: 'auditoria', tooltip: 'Registro completo de actividad' },
+  { to: '/config', label: 'Configuración', icon: Settings, key: 'config', tooltip: 'Ajustes generales' },
 ]
 
 export default function Sidebar() {
   const { usuario, logout } = useAuth()
   const nav = useNavigate()
   const [logoOk, setLogoOk] = useState(true)
+  const [vencidasCount, setVencidasCount] = useState(0)
+
+  useEffect(() => {
+    let cancel = false
+    async function cargarBadge() {
+      const { count } = await supabase
+        .from('tareas_instancia')
+        .select('id', { count: 'exact', head: true })
+        .eq('estado', 'vencida')
+      if (!cancel) setVencidasCount(count ?? 0)
+    }
+    cargarBadge()
+    const t = setInterval(cargarBadge, 60_000)
+    return () => { cancel = true; clearInterval(t) }
+  }, [])
 
   async function handleLogout() {
     await logout(); nav('/login')
@@ -53,7 +69,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {items.map(({ to, label, icon: Icon, tooltip }) => (
+        {items.map(({ to, label, icon: Icon, tooltip, key }) => (
           <NavLink
             key={to}
             to={to}
@@ -66,8 +82,11 @@ export default function Sidebar() {
               }`
             }
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1">{label}</span>
+            {key === 'alertas' && vencidasCount > 0 && (
+              <span className="pill-vencida text-[10px] px-1.5 py-0">{vencidasCount}</span>
+            )}
           </NavLink>
         ))}
       </nav>

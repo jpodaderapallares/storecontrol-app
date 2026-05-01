@@ -92,6 +92,46 @@ export default function Alertas() {
     setTrabajando(false)
   }
 
+  async function eliminarVencida(id: string) {
+    if (!confirm('¿Eliminar esta tarea vencida del sistema?\nLa auditoría no se ve afectada (audit_log es inmutable).')) return
+    setTrabajando(true)
+    const { error } = await supabase.from('tareas_instancia').delete().eq('id', id)
+    if (error) {
+      showToast('err', 'No se pudo eliminar: ' + error.message)
+    } else {
+      await logAccion('vencida_eliminada', 'tareas_instancia', id, {})
+      showToast('ok', 'Tarea vencida eliminada')
+      await cargar()
+    }
+    setTrabajando(false)
+  }
+
+  async function eliminarTodasVencidas() {
+    if (vencidas.length === 0) return
+    if (!confirm(
+      'Vas a ELIMINAR ' + vencidas.length + ' tareas vencidas del sistema.\n\n' +
+      'Útil para presentar la app a empleados sin histórico de incumplimientos.\n\n' +
+      'Las tareas COMPLETADAS y la auditoría no se tocan.\n\n¿Continuar?'
+    )) return
+    setTrabajando(true)
+    const ids = vencidas.map((v: any) => v.id)
+    const { error, count } = await supabase
+      .from('tareas_instancia')
+      .delete({ count: 'exact' })
+      .in('id', ids)
+    if (error) {
+      showToast('err', 'Error en limpieza: ' + error.message)
+    } else {
+      await logAccion('vencidas_purgadas', 'tareas_instancia', undefined, {
+        count: count ?? ids.length,
+        motivo: 'Purga desde Alertas',
+      })
+      showToast('ok', (count ?? ids.length) + ' tareas vencidas eliminadas')
+      await cargar()
+    }
+    setTrabajando(false)
+  }
+
   async function borrarRecordatorio(id: string) {
     if (!confirm('¿Eliminar este registro del log de notificaciones?\nNo afecta a la auditoría (queda en audit_log).')) return
     setTrabajando(true)
@@ -138,14 +178,24 @@ export default function Alertas() {
         actions={
           <>
             {tab === 'incumplimientos' && vencidas.length > 0 && (
-              <button
-                className="btn-secondary"
-                onClick={marcarTodasRevisadas}
-                disabled={trabajando}
-                title="Marcar todas las alertas vencidas listadas como revisadas"
-              >
-                <CheckCheck className="w-4 h-4" /> Marcar todas revisadas
-              </button>
+              <>
+                <button
+                  className="btn-secondary"
+                  onClick={marcarTodasRevisadas}
+                  disabled={trabajando}
+                  title="Marcar todas las alertas vencidas listadas como revisadas"
+                >
+                  <CheckCheck className="w-4 h-4" /> Marcar todas revisadas
+                </button>
+                <button
+                  className="btn-secondary text-danger border-danger/40 hover:bg-danger/10"
+                  onClick={eliminarTodasVencidas}
+                  disabled={trabajando}
+                  title="Eliminar todas las tareas vencidas (no afecta a las completadas ni a la auditoría)"
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar todas vencidas
+                </button>
+              </>
             )}
             {tab === 'recordatorios' && (
               <>
@@ -218,6 +268,15 @@ export default function Alertas() {
               title="Marcar como revisada y mover a Resueltas"
             >
               <CheckCheck className="w-4 h-4" /> Marcar revisada
+            </button>
+            <button
+              className="btn-ghost text-danger p-2"
+              onClick={() => eliminarVencida(i.id)}
+              disabled={trabajando}
+              title="Eliminar esta tarea vencida"
+              aria-label="Eliminar"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         ))}
