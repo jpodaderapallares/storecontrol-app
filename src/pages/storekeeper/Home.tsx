@@ -5,6 +5,7 @@ import { supabase, logAccion } from '@/lib/supabase'
 import { useAuth } from '@/stores/authStore'
 import { EstadoBadge } from '@/components/ui/Badge'
 import { ProgressBar } from '@/components/ui/ProgressBar'
+import { ScanQRButton } from '@/components/ui/ScanQRButton'
 import { fmtDateTime, diaSemanaTxt } from '@/lib/format'
 import {
   FileUp, Paperclip, CheckCircle2, ExternalLink, FileText,
@@ -134,6 +135,13 @@ export default function StorekeeperHome() {
 
   return (
     <div className="space-y-8">
+      {/* Escanear QR — acción principal siempre visible arriba */}
+      <ScanQRButton
+        variant="primary"
+        label="Escanear QR"
+        sublabel="Certificado de calibración, herramienta, documento — abre la cámara"
+      />
+
       {/* Hero progreso del día */}
       <div className="surface p-6">
         <div className="flex items-center justify-between mb-4">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase, logAccion } from '@/lib/supabase'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { ScanQRButton } from '@/components/ui/ScanQRButton'
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 import {
   Building2, CheckCircle2, AlertTriangle, UserX, ArrowRight,
@@ -214,6 +215,7 @@ export default function Dashboard() {
         subtitle="Estado operativo de todas las bases · Cumplimiento en tiempo real"
         actions={
           <>
+            <ScanQRButton variant="compact" label="Escanear QR" />
             <button
               className="btn-ghost"
               onClick={cargar}
