@@ -55,18 +55,8 @@ export default function QrPublic() {
 
   useEffect(() => { if (slug) cargar(slug) }, [slug])
 
-  // Activar modo responsive (desactiva el min-width: 1280px del body global)
-  // y el viewport fijo de 1280 del index.html — solo para esta página pública.
-  useEffect(() => {
-    document.body.classList.add('responsive-mode')
-    const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
-    const previo = viewport?.getAttribute('content') ?? 'width=1280'
-    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover')
-    return () => {
-      document.body.classList.remove('responsive-mode')
-      if (viewport) viewport.setAttribute('content', previo)
-    }
-  }, [])
+  // El viewport ya es responsive globalmente (width=device-width) desde index.html.
+  // Esta página nunca añade la clase admin-view, así que no hay min-width forzado.
 
   async function cargar(s: string) {
     setLoading(true); setError(null)
@@ -127,8 +117,8 @@ export default function QrPublic() {
 
   const soyAdmin = usuario?.rol === 'admin'
   const soyStoreEnBaseActual = usuario?.rol === 'storekeeper' && miBase?.id === h.ubicacion?.base_id
-  const soyStoreEnDestino = usuario?.rol === 'storekeeper' && m && m.to_base_id === miBase?.id
-  const soyStoreEnOrigen = usuario?.rol === 'storekeeper' && m && m.from_base_id === miBase?.id
+  const soyStoreEnDestino = !!m && (soyAdmin || (usuario?.rol === 'storekeeper' && m.to_base_id === miBase?.id))
+  const soyStoreEnOrigen = !!m && (soyAdmin || (usuario?.rol === 'storekeeper' && m.from_base_id === miBase?.id))
   const puedoInteractuar = soyAdmin || soyStoreEnBaseActual || soyStoreEnDestino
 
   return (
@@ -352,8 +342,8 @@ function EstadoBanner({ herramienta: h, movimiento: m }: { herramienta: Herr; mo
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-display font-bold text-cyan-300">En tránsito</div>
-            <div className="text-xs text-slate-400">
-              Enviada desde <b className="font-mono text-slate-200">{m.from_base ?? '—'}</b>
+            <div className="text-xs text-slate-400 break-words">
+              Enviada desde <b className="font-mono text-slate-200">{m.from_base ?? 'Central'}</b>
               {' → '}
               <b className="font-mono text-slate-200">{m.to_base ?? '—'}</b>
               {' · '}{fmtDateTime(m.enviado_at)}

@@ -188,7 +188,7 @@ export default function StorekeeperHome() {
   const pctHoy = totalHoy > 0 ? Math.round((completadasHoy / totalHoy) * 100) : null
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Escanear QR — acción principal siempre visible arriba */}
       <ScanQRButton
         variant="primary"
@@ -219,7 +219,7 @@ export default function StorekeeperHome() {
               >
                 <Send className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
                 <span className="font-mono font-bold text-warning">{m.herr_codigo ?? m.herramienta_id.slice(0, 8)}</span>
-                <span className="text-slate-500 text-xs">desde <span className="font-mono">{m.from_codigo ?? '—'}</span></span>
+                <span className="text-slate-500 text-xs">desde <span className="font-mono">{m.from_codigo ?? 'Central'}</span></span>
                 <span className="ml-auto text-slate-500 text-[10px] font-mono">{fmtDateTime(m.enviado_at)}</span>
               </Link>
             ))}
@@ -267,19 +267,19 @@ export default function StorekeeperHome() {
       </Link>
 
       {/* Hero progreso del día */}
-      <div className="surface p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+      <div className="surface p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <div className="min-w-0">
             <div className="label">Progreso del día</div>
-            <div className="font-display text-2xl font-extrabold mt-1">
+            <div className="font-display text-lg sm:text-2xl font-extrabold mt-1 leading-tight">
               {totalHoy === 0
                 ? 'No hay tareas diarias para hoy'
                 : `Hoy: ${completadasHoy} de ${totalHoy} tareas completadas`}
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right flex-shrink-0">
             <div className={clsx(
-              'font-display text-5xl font-extrabold',
+              'font-display text-3xl sm:text-5xl font-extrabold',
               pctHoy === null ? 'text-slate-500'
                 : pctHoy >= 85 ? 'text-success'
                 : pctHoy >= 60 ? 'text-warning'
@@ -394,17 +394,17 @@ export default function StorekeeperHome() {
       )}
 
       {/* Acceso rápido a procedimientos */}
-      <div className="surface p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+      <div className="surface p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <div className="min-w-0">
             <div className="label">{t('home.quick_access')}</div>
-            <div className="font-display text-xl font-bold mt-1">{t('home.most_used_procedures')}</div>
+            <div className="font-display text-lg sm:text-xl font-bold mt-1 truncate">{t('home.most_used_procedures')}</div>
           </div>
-          <Link to={`/base/${base?.codigo_iata}/biblioteca`} className="btn-ghost" title={t('home.open_library')}>
-            <BookOpen className="w-4 h-4" /> {t('home.see_all')}
+          <Link to={`/base/${base?.codigo_iata}/biblioteca`} className="btn-ghost flex-shrink-0" title={t('home.open_library')}>
+            <BookOpen className="w-4 h-4" /> <span className="hidden sm:inline">{t('home.see_all')}</span>
           </Link>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           {procedimientos.map(p => (
             <Link
               key={p.id}

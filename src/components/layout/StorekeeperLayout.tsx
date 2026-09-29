@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, NavLink, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '@/stores/authStore'
-import { ShieldCheck, LogOut, BookOpen, QrCode, Home, ChevronLeft } from 'lucide-react'
+import { ShieldCheck, LogOut, BookOpen, QrCode, Home, ChevronLeft, Menu, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { es, enGB, pl } from 'date-fns/locale'
 import clsx from 'clsx'
@@ -23,6 +23,7 @@ export default function StorekeeperLayout() {
   const { t, lang } = useT()
   const hoy = format(new Date(), dateFormatByLang[lang], { locale: dateLocaleMap[lang] })
   const [logoOk, setLogoOk] = useState(true)
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false)
 
   async function doLogout() { await logout(); nav('/login') }
 
@@ -33,41 +34,41 @@ export default function StorekeeperLayout() {
   return (
     <div className="min-h-screen bg-bg">
       <header className="bg-bg-surface border-b sticky top-0 z-30 backdrop-blur-sm">
-        <div className="max-w-[1600px] mx-auto px-8 py-4 flex items-center gap-6">
-          {/* Logo StoreControl + HLA — clickable hacia inicio */}
+        {/* Fila superior — logo + base + botón menú móvil */}
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-8 py-3 sm:py-4 flex items-center gap-3 sm:gap-6">
           <Link
             to={inicioPath}
-            className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 sm:gap-3 hover:opacity-90 transition-opacity min-w-0"
             title={t('layout.back_to_home')}
           >
-            <div className="w-10 h-10 rounded-lg bg-accent grid place-items-center shadow-sm">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-accent grid place-items-center shadow-sm flex-shrink-0">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <div className="font-display text-xl font-extrabold leading-none">StoreControl</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-0.5">{t('layout.tagline')}</div>
+            <div className="min-w-0">
+              <div className="font-display text-base sm:text-xl font-extrabold leading-none truncate">StoreControl</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-0.5 hidden sm:block">{t('layout.tagline')}</div>
             </div>
             {logoOk && (
               <img
                 src="/hla-logo.png"
                 alt="HLA"
-                className="h-8 w-auto ml-2 opacity-90"
+                className="h-7 sm:h-8 w-auto ml-2 opacity-90 hidden sm:block"
                 onError={() => setLogoOk(false)}
               />
             )}
           </Link>
 
-          <div className="h-10 w-px bg-bg-border mx-1" />
+          <div className="h-10 w-px bg-bg-border mx-0 sm:mx-1 hidden sm:block" />
 
-          <Link to={inicioPath} className="hover:opacity-90 transition-opacity" title={t('layout.back_to_home')}>
-            <div className="iata text-2xl">{base?.codigo_iata ?? '—'}</div>
-            <div className="text-xs text-slate-400 font-mono">{base?.nombre_completo}</div>
+          <Link to={inicioPath} className="hover:opacity-90 transition-opacity min-w-0" title={t('layout.back_to_home')}>
+            <div className="iata text-xl sm:text-2xl">{base?.codigo_iata ?? '—'}</div>
+            <div className="text-[10px] sm:text-xs text-slate-400 font-mono truncate max-w-[120px] sm:max-w-none">{base?.nombre_completo}</div>
           </Link>
 
           <div className="flex-1" />
 
-          {/* Navegación principal con estado activo */}
-          <nav className="flex items-center gap-1.5">
+          {/* Nav desktop */}
+          <nav className="hidden lg:flex items-center gap-1.5">
             <NavTab to={inicioPath} icon={Home} label={t('nav.home')} tooltip={t('nav.home_tooltip')} end />
             <NavTab
               to={`${inicioPath}/biblioteca`}
@@ -83,23 +84,69 @@ export default function StorekeeperLayout() {
             />
           </nav>
 
-          <div className="h-10 w-px bg-bg-border mx-1" />
-
-          <LangSelector variant="header" />
-
-          <div className="text-right">
-            <div className="text-sm font-medium" title={usuario?.email}>{usuario?.nombre}</div>
-            <div className="text-[11px] text-slate-500 font-mono capitalize">{hoy}</div>
+          {/* Bloque desktop derecho */}
+          <div className="hidden lg:flex items-center gap-3">
+            <div className="h-10 w-px bg-bg-border mx-1" />
+            <LangSelector variant="header" />
+            <div className="text-right">
+              <div className="text-sm font-medium" title={usuario?.email}>{usuario?.nombre}</div>
+              <div className="text-[11px] text-slate-500 font-mono capitalize">{hoy}</div>
+            </div>
+            <button onClick={doLogout} className="btn-ghost" title={t('layout.logout')}>
+              <LogOut className="w-4 h-4" /> {t('layout.exit')}
+            </button>
           </div>
 
-          <button onClick={doLogout} className="btn-ghost" title={t('layout.logout')}>
-            <LogOut className="w-4 h-4" /> {t('layout.exit')}
+          {/* Botón hamburger — solo tablet/móvil */}
+          <button
+            className="lg:hidden p-2 -mr-1 rounded-lg hover:bg-bg-elevated text-slate-300"
+            onClick={() => setMenuMovilAbierto(v => !v)}
+            aria-label={menuMovilAbierto ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {menuMovilAbierto ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
+        {/* Menú móvil desplegable */}
+        {menuMovilAbierto && (
+          <div className="lg:hidden border-t border-bg-border bg-bg-surface px-3 py-3 space-y-2" onClick={() => setMenuMovilAbierto(false)}>
+            <div className="flex flex-col gap-1.5">
+              <NavTab to={inicioPath} icon={Home} label={t('nav.home')} tooltip="" end />
+              <NavTab
+                to={`${inicioPath}/biblioteca`}
+                icon={BookOpen}
+                label={t('nav.library')}
+                tooltip=""
+              />
+              <NavTab
+                to={`${inicioPath}/qr`}
+                icon={QrCode}
+                label={t('nav.qr')}
+                tooltip=""
+              />
+            </div>
+            <div className="border-t border-bg-border pt-2 mt-2 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate" title={usuario?.email}>{usuario?.nombre}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{hoy}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <LangSelector variant="header" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); doLogout() }}
+                  className="btn-ghost"
+                  title={t('layout.logout')}
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Breadcrumb / botón Volver — solo en sub-páginas */}
         {enSubpagina && (
-          <div className="max-w-[1600px] mx-auto px-8 pb-3">
+          <div className="max-w-[1600px] mx-auto px-3 sm:px-8 pb-3">
             <Link
               to={inicioPath}
               className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-accent transition-colors font-mono"
@@ -112,7 +159,7 @@ export default function StorekeeperLayout() {
         )}
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-8">
+      <main className="max-w-[1600px] mx-auto p-3 sm:p-8">
         <Outlet />
       </main>
 
