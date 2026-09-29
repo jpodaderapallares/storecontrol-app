@@ -166,6 +166,54 @@ export interface RecordatorioConsolidado {
   created_at: string
 }
 
+// === Herramientas calibradas (v2) ===
+export type HerramientaEstado = 'activa' | 'en_transito' | 'bloqueada' | 'baja'
+export type MovimientoEstado  = 'pendiente_recepcion' | 'recibido' | 'anulado'
+
+export interface Herramienta {
+  id: string
+  codigo_interno: string
+  numero_serie: string | null
+  marca: string | null
+  modelo: string | null
+  tipo: string | null
+  rango: string | null
+  ubicacion_base_id: string | null
+  estado: HerramientaEstado
+  foto_url: string | null
+  notas: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Calibracion {
+  id: string
+  herramienta_id: string
+  fecha_calibracion: string
+  vence_en: string
+  laboratorio: string | null
+  certificado_pdf: string | null
+  incertidumbre: { valor: number | null; unidad: string | null } | null
+  parseado_por_ia: boolean
+  notas: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export interface Movimiento {
+  id: string
+  herramienta_id: string
+  from_base_id: string | null
+  to_base_id: string | null
+  estado: MovimientoEstado
+  enviado_at: string
+  recibido_at: string | null
+  enviado_by: string | null
+  recibido_by: string | null
+  notas: string | null
+}
+
 // === Módulo QR (independiente del resto de StoreControl) ===
 export interface DocumentoQR {
   id: string

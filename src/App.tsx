@@ -18,6 +18,7 @@ import StorekeeperHome from './pages/storekeeper/Home'
 import StorekeeperBiblioteca from './pages/storekeeper/Biblioteca'
 import StorekeeperQR from './pages/storekeeper/QR'
 import AdminQR from './pages/admin/QR'
+import Herramientas from './pages/admin/Herramientas'
 import QrRedirect from './pages/qr/QrRedirect'
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/formatos" element={<Formatos />} />
           <Route path="/alertas" element={<Alertas />} />
           <Route path="/biblioteca" element={<BibliotecaAdmin />} />
+          <Route path="/herramientas" element={<Herramientas />} />
           <Route path="/qr-manager" element={<AdminQR />} />
           <Route path="/emails" element={<PlantillasEmail />} />
           <Route path="/auditoria" element={<Auditoria />} />
