@@ -553,33 +553,34 @@ function NuevaHerramientaModal({
         if (error) throw error
       }
 
-      // 3. Generar el QR de la herramienta (documentos_qr → apunta a la herramienta)
-      //    Solo si es NUEVA (editar no regenera QR)
-      if (!editing && herrId) {
+      // 3. Asegurar que la herramienta tiene su QR único.
+      //    NO subimos placeholder: la Edge Function qr-redirect (v3) detecta
+      //    herramienta_id y sirve automáticamente la ÚLTIMA calibración
+      //    desde el bucket certificados_calibracion. Al renovar el cert,
+      //    el mismo QR físico apunta al nuevo PDF sin regenerar nada.
+      const yaTieneQR = editing?.qr_slug ?? null
+      if (herrId && !yaTieneQR) {
         const slug = generarSlug()
         setNuevoSlug(slug)
-        // Insert en documentos_qr para reutilizar el flujo /qr/:slug existente
-        // Usa el cert PDF como archivo objetivo si existe
-        const dummyPath = `herramientas/${herrId}/qr.txt`
-        // Subimos un pequeño placeholder para tener storage_path válido
-        const placeholder = new Blob([`Herramienta ${fields.codigo_interno} · QR ${slug}`], { type: 'text/plain' })
-        await supabase.storage.from(QR_BUCKET).upload(dummyPath, placeholder, { upsert: true })
-
+        // storage_path debe ser NOT NULL pero no se usa cuando hay herramienta_id.
+        // Usamos un identificador sintético (no crea fichero real).
+        const dummyPath = `herramientas/${herrId}/no-storage`
         await supabase.from('documentos_qr').insert({
           propietario_id: usuario.id,
           base_id: fields.ubicacion_base_id || null,
           herramienta_id: herrId,
           slug,
           filename: 'Herramienta ' + fields.codigo_interno,
-          size_bytes: placeholder.size,
-          content_type: 'text/plain',
+          size_bytes: 0,
+          content_type: 'application/pdf',
           storage_path: dummyPath,
         })
-
-        await logAccion('herramienta_creada', 'herramientas', herrId, {
-          codigo: fields.codigo_interno, slug_qr: slug,
-        })
-      } else if (editing) {
+        await logAccion(editing ? 'herramienta_qr_generado' : 'herramienta_creada',
+          'herramientas', herrId, {
+            codigo: fields.codigo_interno, slug_qr: slug,
+          })
+      } else if (yaTieneQR) {
+        setNuevoSlug(yaTieneQR)  // para mostrar el mismo QR en el resumen final
         await logAccion('herramienta_modificada', 'herramientas', herrId, { codigo: fields.codigo_interno })
       }
 
