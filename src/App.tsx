@@ -21,6 +21,7 @@ import CheckinSemanal from './pages/storekeeper/Checkin'
 import AdminQR from './pages/admin/QR'
 import Herramientas from './pages/admin/Herramientas'
 import QrRedirect from './pages/qr/QrRedirect'
+import QrPublic from './pages/qr/QrPublic'
 
 export default function App() {
   const { usuario, cargando, inicializar } = useAuth()
@@ -37,8 +38,10 @@ export default function App() {
   if (!usuario) {
     return (
       <Routes>
-        {/* Ruta pública de redirección QR — accesible sin sesión. */}
-        <Route path="/qr/:slug" element={<QrRedirect />} />
+        {/* Vista pública contextual del QR — accesible sin sesión.
+            Cae a redirect al PDF si el QR no está ligado a herramienta. */}
+        <Route path="/qr/:slug" element={<QrPublic />} />
+        <Route path="/qr-doc/:slug" element={<QrRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
@@ -48,8 +51,9 @@ export default function App() {
   if (usuario.rol === 'admin') {
     return (
       <Routes>
-        {/* Ruta pública de redirección QR — fuera del layout admin. */}
-        <Route path="/qr/:slug" element={<QrRedirect />} />
+        {/* Vista pública contextual del QR — fuera del layout admin. */}
+        <Route path="/qr/:slug" element={<QrPublic />} />
+        <Route path="/qr-doc/:slug" element={<QrRedirect />} />
         <Route element={<AdminLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin/base/:codigo" element={<BaseDetail />} />
@@ -72,9 +76,10 @@ export default function App() {
   // Storekeeper
   return (
     <Routes>
-      {/* Ruta pública de redirección QR — fuera del layout de storekeeper para
-          que también funcione si un storekeeper escanea su propio QR. */}
-      <Route path="/qr/:slug" element={<QrRedirect />} />
+      {/* Vista pública contextual del QR — fuera del layout de storekeeper para
+          que también funcione si un storekeeper escanea el QR de otra base. */}
+      <Route path="/qr/:slug" element={<QrPublic />} />
+      <Route path="/qr-doc/:slug" element={<QrRedirect />} />
       <Route element={<StorekeeperLayout />}>
         <Route path="/base/:codigo" element={<StorekeeperHome />} />
         <Route path="/base/:codigo/biblioteca" element={<StorekeeperBiblioteca />} />

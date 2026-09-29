@@ -10,7 +10,7 @@ import { fmtDateTime, diaSemanaTxt } from '@/lib/format'
 import {
   FileUp, Paperclip, CheckCircle2, ExternalLink, FileText,
   BookOpen, AlertCircle, Calendar, Clock, AlertTriangle, ChevronDown, ChevronUp,
-  ClipboardCheck,
+  ClipboardCheck, Send, PackageOpen,
 } from 'lucide-react'
 import clsx from 'clsx'
 import type { TareaInstancia } from '@/lib/database.types'
@@ -54,10 +54,40 @@ export default function StorekeeperHome() {
   const [procedimientos, setProcedimientos] = useState<any[]>([])
   const [mostrarCompletadas, setMostrarCompletadas] = useState(false)
   const [checkinSemanaFirmado, setCheckinSemanaFirmado] = useState<boolean | null>(null)
+  const [movsPendientes, setMovsPendientes] = useState<Array<{
+    id: string; herramienta_id: string; from_codigo?: string; herr_codigo?: string; herr_qr_slug?: string; enviado_at: string
+  }>>([])
   const pendStr = (n: number) => `${n} ${n === 1 ? t('home.pending_one') : t('home.pending_many')}`
 
   useEffect(() => { cargar() }, [base?.id])
-  useEffect(() => { cargarCheckin() }, [base?.id])
+  useEffect(() => { cargarCheckin(); cargarMovs() }, [base?.id])
+
+  async function cargarMovs() {
+    if (!base?.id) return
+    const { data } = await supabase
+      .from('movimientos')
+      .select('id, herramienta_id, enviado_at, from_base:from_base_id(codigo_iata), herramientas(codigo_interno)')
+      .eq('to_base_id', base.id)
+      .eq('estado', 'pendiente_recepcion')
+      .order('enviado_at', { ascending: false })
+    const rows = ((data ?? []) as any[]).map(m => ({
+      id: m.id,
+      herramienta_id: m.herramienta_id,
+      from_codigo: m.from_base?.codigo_iata,
+      herr_codigo: m.herramientas?.codigo_interno,
+      enviado_at: m.enviado_at,
+    }))
+    // Buscar los slugs de QR para poder linkar
+    const herrIds = rows.map(r => r.herramienta_id)
+    if (herrIds.length > 0) {
+      const { data: qrs } = await supabase.from('documentos_qr')
+        .select('slug, herramienta_id').in('herramienta_id', herrIds).is('deleted_at', null)
+      const slugMap: Record<string, string> = {}
+      for (const q of (qrs ?? []) as any[]) slugMap[q.herramienta_id] = q.slug
+      rows.forEach((r: any) => { r.herr_qr_slug = slugMap[r.herramienta_id] })
+    }
+    setMovsPendientes(rows)
+  }
 
   async function cargarCheckin() {
     if (!base?.id) return
@@ -165,6 +195,37 @@ export default function StorekeeperHome() {
         label="Escanear QR"
         sublabel="Certificado de calibración, herramienta, documento — abre la cámara"
       />
+
+      {/* Recepciones pendientes — solo si hay herramientas en tránsito hacia esta base */}
+      {movsPendientes.length > 0 && (
+        <div className="p-5 rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-cyan-500/15 via-cyan-500/5 to-transparent">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 to-accent grid place-items-center text-white">
+              <PackageOpen className="w-6 h-6" strokeWidth={2.4} />
+            </div>
+            <div>
+              <div className="font-display text-lg font-extrabold text-cyan-200">
+                {movsPendientes.length} recepción{movsPendientes.length === 1 ? '' : 'es'} pendiente{movsPendientes.length === 1 ? '' : 's'}
+              </div>
+              <div className="text-xs text-slate-400">Herramientas enviadas hacia tu base · escanea el QR para confirmar</div>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {movsPendientes.slice(0, 5).map(m => (
+              <Link
+                key={m.id}
+                to={m.herr_qr_slug ? `/qr/${m.herr_qr_slug}` : '#'}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg bg-bg-elevated hover:bg-bg-border transition-colors text-sm border border-bg-border"
+              >
+                <Send className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                <span className="font-mono font-bold text-warning">{m.herr_codigo ?? m.herramienta_id.slice(0, 8)}</span>
+                <span className="text-slate-500 text-xs">desde <span className="font-mono">{m.from_codigo ?? '—'}</span></span>
+                <span className="ml-auto text-slate-500 text-[10px] font-mono">{fmtDateTime(m.enviado_at)}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Check-in semanal · tarjeta destacada */}
       <Link
