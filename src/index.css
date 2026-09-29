@@ -9,6 +9,8 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     min-width: 1280px;
   }
+  /* Rutas públicas responsive (QR escaneado desde móvil) desactivan el min-width */
+  body.responsive-mode { min-width: 0 !important; }
   * { border-color: theme('colors.bg.border'); }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: #0a0d14; }

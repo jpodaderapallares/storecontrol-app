@@ -15,7 +15,7 @@ type QrCodeErrorCallback = (errorMessage: string, error: unknown) => void
 interface Html5QrcodeCtor {
   new (elementId: string, verbose?: boolean): {
     start: (
-      cameraIdOrConfig: string | { facingMode: string },
+      cameraIdOrConfig: string | { facingMode: string } | { deviceId: { exact: string } },
       config: { fps: number; qrbox: { width: number; height: number } | number },
       qrCodeSuccessCallback: QrCodeSuccessCallback,
       qrCodeErrorCallback?: QrCodeErrorCallback,
@@ -23,6 +23,7 @@ interface Html5QrcodeCtor {
     stop: () => Promise<void>
     clear: () => void
   }
+  getCameras: () => Promise<Array<{ id: string; label: string }>>
 }
 interface Html5QrcodeModule {
   Html5Qrcode: Html5QrcodeCtor
@@ -54,33 +55,49 @@ export function ScanQRModal({ onClose }: { onClose: () => void }) {
         const reader = new Html5Qrcode(containerId, false)
         readerRef.current = reader
 
-        await reader.start(
-          { facingMode: 'environment' }, // usa cámara trasera en móvil, la webcam en PC
-          {
-            fps: 10,
-            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              // Cuadrícula centrada ~65% del lado más corto
-              const min = Math.min(viewfinderWidth, viewfinderHeight)
-              const side = Math.floor(min * 0.65)
-              return { width: side, height: side }
-            },
-          } as any,
-          (decodedText: string) => {
-            if (cancelled) return
-            setDetectado(decodedText)
-            // Detener cámara y navegar
-            reader.stop().then(() => reader.clear()).catch(() => {})
-            navegarAlResultado(decodedText)
+        const config = {
+          fps: 10,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const min = Math.min(viewfinderWidth, viewfinderHeight)
+            const side = Math.floor(min * 0.65)
+            return { width: side, height: side }
           },
-          () => { /* frames sin QR — silenciar */ },
-        )
+        } as any
+        const onSuccess = (decodedText: string) => {
+          if (cancelled) return
+          setDetectado(decodedText)
+          reader.stop().then(() => reader.clear()).catch(() => {})
+          navegarAlResultado(decodedText)
+        }
+        const onError = () => { /* frames sin QR — silenciar */ }
+
+        // 1) Enumerar cámaras. Si getCameras falla, cae a facingMode.
+        let cameras: Array<{ id: string; label: string }> = []
+        try {
+          cameras = await Html5Qrcode.getCameras()
+        } catch { /* fallback abajo */ }
+
+        if (cameras && cameras.length > 0) {
+          // Preferir cámara trasera en móvil; en PC coger la primera disponible
+          const rear = cameras.find(c => /back|rear|environment/i.test(c.label))
+          const target = rear ?? cameras[0]
+          await reader.start(target.id, config, onSuccess, onError)
+        } else {
+          // Sin lista de cámaras: probar facingMode.environment y si peta, cualquier cámara
+          try {
+            await reader.start({ facingMode: 'environment' }, config, onSuccess, onError)
+          } catch {
+            await reader.start({ facingMode: 'user' as any }, config, onSuccess, onError)
+          }
+        }
+
         if (!cancelled) setPermiso('granted')
       } catch (e: any) {
         if (cancelled) return
         const msg = String(e?.message ?? e ?? '')
         if (/permission|denied|NotAllowed/i.test(msg)) {
           setPermiso('denied')
-        } else if (/NotFound|NoDevices/i.test(msg)) {
+        } else if (/NotFound|NoDevices|OverconstrainedError/i.test(msg)) {
           setPermiso('unsupported')
         } else {
           setPermiso('denied')

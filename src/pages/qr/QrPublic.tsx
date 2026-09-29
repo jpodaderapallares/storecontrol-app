@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   Loader2, AlertCircle, ShieldCheck, FileText, Building2, Send,
-  CheckCircle2, AlertTriangle, LogIn, Wrench, Calendar, ExternalLink,
+  CheckCircle2, AlertTriangle, LogIn, Wrench, Calendar, ExternalLink, X,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { supabase, logAccion } from '@/lib/supabase'
@@ -54,6 +54,19 @@ export default function QrPublic() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { if (slug) cargar(slug) }, [slug])
+
+  // Activar modo responsive (desactiva el min-width: 1280px del body global)
+  // y el viewport fijo de 1280 del index.html — solo para esta página pública.
+  useEffect(() => {
+    document.body.classList.add('responsive-mode')
+    const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]')
+    const previo = viewport?.getAttribute('content') ?? 'width=1280'
+    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    return () => {
+      document.body.classList.remove('responsive-mode')
+      if (viewport) viewport.setAttribute('content', previo)
+    }
+  }, [])
 
   async function cargar(s: string) {
     setLoading(true); setError(null)
@@ -119,26 +132,26 @@ export default function QrPublic() {
   const puedoInteractuar = soyAdmin || soyStoreEnBaseActual || soyStoreEnDestino
 
   return (
-    <div className="min-h-screen bg-bg py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-4">
+    <div className="min-h-screen bg-bg py-4 sm:py-8 px-3 sm:px-4">
+      <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
         <Header />
 
         {/* Estado destacado */}
         <EstadoBanner herramienta={h} movimiento={m} />
 
         {/* Ficha herramienta */}
-        <div className="surface p-6">
+        <div className="surface p-4 sm:p-6">
           <div className="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-1">Herramienta</div>
-          <h1 className="font-display text-3xl font-extrabold">{h.codigo_interno}</h1>
-          <div className="text-slate-400 mt-1">
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold break-words">{h.codigo_interno}</h1>
+          <div className="text-sm sm:text-base text-slate-400 mt-1 break-words">
             {[h.marca, h.modelo].filter(Boolean).join(' · ')}
             {h.tipo && <span className="text-slate-500"> · {h.tipo}</span>}
           </div>
           {h.rango && (
-            <div className="text-xs text-slate-500 font-mono mt-2">{h.rango}</div>
+            <div className="text-xs text-slate-500 font-mono mt-2 break-words">{h.rango}</div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 mt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 sm:mt-5">
             {h.numero_serie && (
               <Dato label="Número de serie" value={h.numero_serie} mono />
             )}
@@ -152,19 +165,19 @@ export default function QrPublic() {
         {/* Certificado — el corazón del QR */}
         {c ? (
           <div className={clsx(
-            'surface p-6',
+            'surface p-4 sm:p-6',
             venceEnDias(c.vence_en) < 0 ? 'border-danger/40 bg-danger/5' :
             venceEnDias(c.vence_en) < 15 ? 'border-warning/40 bg-warning/5' :
             'border-success/30 bg-success/5',
           )}>
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-danger to-orange-600 grid place-items-center text-white font-bold font-mono flex-shrink-0">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gradient-to-br from-danger to-orange-600 grid place-items-center text-white font-bold font-mono flex-shrink-0 text-sm sm:text-base">
                 PDF
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-1">Certificado de calibración</div>
                 <div className={clsx(
-                  'font-display text-lg font-bold',
+                  'font-display text-base sm:text-lg font-bold break-words',
                   venceEnDias(c.vence_en) < 0 ? 'text-danger' :
                   venceEnDias(c.vence_en) < 15 ? 'text-warning' :
                   'text-success',
@@ -173,7 +186,7 @@ export default function QrPublic() {
                     ? 'Calibración VENCIDA · No usar la herramienta'
                     : 'Vence: ' + fmtDate(c.vence_en) + ' (' + venceEnDias(c.vence_en) + ' días)'}
                 </div>
-                <div className="text-xs text-slate-400 mt-1">
+                <div className="text-xs text-slate-400 mt-1 break-words">
                   Última cal.: {fmtDate(c.fecha_calibracion)}
                   {c.laboratorio && <> · {c.laboratorio}</>}
                 </div>
@@ -186,17 +199,17 @@ export default function QrPublic() {
             </div>
 
             {c.has_pdf && (
-              <button className="btn-primary w-full mt-4 justify-center" onClick={abrirCertificado}>
+              <button className="btn-primary w-full mt-4 justify-center py-3 text-base" onClick={abrirCertificado}>
                 <FileText className="w-4 h-4" /> Ver certificado PDF
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </button>
             )}
           </div>
         ) : (
-          <div className="surface p-6 border-warning/40 bg-warning/5">
+          <div className="surface p-4 sm:p-6 border-warning/40 bg-warning/5">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-warning" />
-              <div>
+              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+              <div className="min-w-0">
                 <div className="font-medium text-warning">Sin certificado registrado</div>
                 <div className="text-xs text-slate-400">La herramienta existe pero no tiene calibración cargada.</div>
               </div>
@@ -423,12 +436,16 @@ function AccionesHerramienta({
   // Vista de recepción destacada
   if (soyStoreEnDestino && m) {
     return (
-      <div className="surface p-5 border-success/40 bg-success/5">
+      <div className="surface p-4 sm:p-5 border-success/40 bg-success/5">
         <div className="text-center mb-3">
           <div className="text-[10px] uppercase tracking-wider text-success font-mono">Acción pendiente</div>
           <div className="font-display text-lg font-bold text-success mt-1">Confirmar recepción en tu base</div>
         </div>
-        <button className="btn-primary w-full justify-center bg-success hover:bg-success/80" onClick={confirmarRecepcion} disabled={confirmando}>
+        <button
+          className="btn-primary w-full justify-center bg-success hover:bg-success/80 py-3 text-base"
+          onClick={confirmarRecepcion}
+          disabled={confirmando}
+        >
           {confirmando ? <><Loader2 className="w-4 h-4 animate-spin" /> Confirmando…</> : <><CheckCircle2 className="w-4 h-4" /> Confirmar recepción</>}
         </button>
         {error && <div className="mt-2 text-xs text-danger">{error}</div>}
@@ -437,20 +454,20 @@ function AccionesHerramienta({
   }
 
   return (
-    <div className="surface p-5 space-y-2">
+    <div className="surface p-4 sm:p-5 space-y-2">
       <div className="text-[10px] uppercase tracking-wider text-slate-500 font-mono mb-2">Acciones disponibles</div>
 
       {h.estado === 'activa' && (
         <>
           <button
-            className="btn-secondary w-full justify-center"
+            className="btn-secondary w-full justify-center py-3 text-base"
             onClick={() => setModalEnviar(true)}
             disabled={confirmando}
           >
             <Send className="w-4 h-4" /> Enviar a otra base
           </button>
           <button
-            className="btn-ghost w-full justify-center text-danger hover:bg-danger/10"
+            className="btn-ghost w-full justify-center text-danger hover:bg-danger/10 py-3 text-base"
             onClick={marcarDefectuosa}
             disabled={confirmando}
           >
@@ -461,7 +478,7 @@ function AccionesHerramienta({
 
       {h.estado === 'en_transito' && soyStoreEnOrigen && m && (
         <button
-          className="btn-ghost w-full justify-center text-warning hover:bg-warning/10"
+          className="btn-ghost w-full justify-center text-warning hover:bg-warning/10 py-3 text-base"
           onClick={anularEnvio}
           disabled={confirmando}
         >
@@ -472,7 +489,7 @@ function AccionesHerramienta({
       {soyAdmin && (
         <Link
           to={'/herramientas'}
-          className="btn-ghost w-full justify-center"
+          className="btn-ghost w-full justify-center py-3 text-base"
         >
           <Wrench className="w-4 h-4" /> Ver en Herramientas (admin)
         </Link>
@@ -523,16 +540,36 @@ function ModalEnviar({ herramienta: h, onClose, onDone }: { herramienta: Herr; o
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="surface max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-accent grid place-items-center text-white">
-            <Send className="w-5 h-5" />
+    <div
+      className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="surface w-full sm:max-w-md sm:w-full p-5 sm:p-6 max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-accent grid place-items-center text-white flex-shrink-0">
+              <Send className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-display text-lg sm:text-xl font-extrabold truncate">
+                Enviar {h.codigo_interno}
+              </div>
+              <div className="text-xs text-slate-500 font-mono">
+                Desde {h.ubicacion?.codigo_iata ?? 'Central'}
+              </div>
+            </div>
           </div>
-          <div>
-            <div className="font-display text-xl font-extrabold">Enviar {h.codigo_interno}</div>
-            <div className="text-xs text-slate-500 font-mono">Desde {h.ubicacion?.codigo_iata ?? 'Central'}</div>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 -mr-2 -mt-1 rounded-lg hover:bg-bg-elevated text-slate-400 flex-shrink-0"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="space-y-3">
