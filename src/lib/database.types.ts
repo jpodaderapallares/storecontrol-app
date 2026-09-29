@@ -170,7 +170,8 @@ export interface RecordatorioConsolidado {
 export interface DocumentoQR {
   id: string
   propietario_id: string
-  base_id: string
+  base_id: string | null       // null = Logística Central (creado por admin)
+  herramienta_id?: string | null
   slug: string
   filename: string
   size_bytes: number

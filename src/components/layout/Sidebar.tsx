@@ -4,7 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/stores/authStore'
 import {
   LayoutDashboard, ListChecks, Users, Bell, BookOpen,
-  FileClock, Settings, LogOut, ShieldCheck, FileText, Mail,
+  FileClock, Settings, LogOut, ShieldCheck, FileText, Mail, QrCode,
 } from 'lucide-react'
 import LangSelector from '@/components/ui/LangSelector'
 
@@ -15,6 +15,7 @@ const items = [
   { to: '/formatos', label: 'Formatos', icon: FileText, key: 'formatos', tooltip: 'Plantillas en blanco (F005, F014…)' },
   { to: '/alertas', label: 'Alertas', icon: Bell, key: 'alertas', tooltip: 'Tareas vencidas · recordatorios' },
   { to: '/biblioteca', label: 'BT Biblioteca', icon: BookOpen, key: 'biblioteca', tooltip: 'Procedimientos técnicos · LOGN, LOGTRA…' },
+  { to: '/qr-manager', label: 'Gestor QRs', icon: QrCode, key: 'qr', tooltip: 'Subir documentos y generar QRs para herramientas' },
   { to: '/emails', label: 'Plantillas email', icon: Mail, key: 'emails', tooltip: 'Plantillas de correo' },
   { to: '/auditoria', label: 'Auditoría', icon: FileClock, key: 'auditoria', tooltip: 'Registro completo de actividad' },
   { to: '/config', label: 'Configuración', icon: Settings, key: 'config', tooltip: 'Ajustes generales' },
