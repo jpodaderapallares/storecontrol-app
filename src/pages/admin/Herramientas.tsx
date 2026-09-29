@@ -90,7 +90,7 @@ export default function HerramientasPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<HerramientaConCal | null>(null)
-  const [qrOpen, setQrOpen] = useState<{ slug: string; label: string } | null>(null)
+  const [qrOpen, setQrOpen] = useState<{ slug: string; label: string; sn?: string | null } | null>(null)
 
   useEffect(() => { if (usuario) { cargar(); cargarBases() } /* eslint-disable-next-line */ }, [usuario?.id])
 
@@ -248,7 +248,7 @@ export default function HerramientasPage() {
               {filtradas.map(h => <FilaHerramienta key={h.id} h={h}
                 onEditar={() => { setEditing(h); setModalOpen(true) }}
                 onVerQR={() => {
-                  if (h.qr_slug) setQrOpen({ slug: h.qr_slug, label: h.codigo_interno })
+                  if (h.qr_slug) setQrOpen({ slug: h.qr_slug, label: h.codigo_interno, sn: h.numero_serie })
                   else alert('Esta herramienta aún no tiene QR asignado. Edítala y guarda para generarlo.')
                 }} />)}
             </tbody>
@@ -265,7 +265,7 @@ export default function HerramientasPage() {
         />
       )}
 
-      {qrOpen && <QrPreviewModal slug={qrOpen.slug} label={qrOpen.label} onClose={() => setQrOpen(null)} />}
+      {qrOpen && <QrPreviewModal slug={qrOpen.slug} label={qrOpen.label} sn={qrOpen.sn} onClose={() => setQrOpen(null)} />}
     </>
   )
 }
@@ -695,7 +695,7 @@ function NuevaHerramientaModal({
               </div>
               {nuevoSlug && (
                 <div className="mt-6 inline-block">
-                  <QrPreviewInline slug={nuevoSlug} />
+                  <QrPreviewInline slug={nuevoSlug} codigo={fields.codigo_interno} />
                 </div>
               )}
               <div className="flex justify-center gap-2 mt-6">
@@ -812,37 +812,95 @@ function Campo({
 }
 
 // ============================================================
-//  QR preview (inline y modal)
+//  QR preview (inline y modal) — con etiqueta imprimible
+//
+//  La etiqueta imprimible incluye dentro del recuadro blanco:
+//    - Header:  código interno (HLACAL_002)   ← dinámico
+//    - QR centrado (protagonista)
+//    - Footer:  HLA · ES.145.165              ← fijo, identificador organización
+//
+//  El texto tiene tamaño proporcional al QR, sin restarle protagonismo.
 // ============================================================
-function QrPreviewInline({ slug }: { slug: string }) {
+
+const LABEL_ORG_FOOTER = 'HLA · ES.145.165'
+const QR_SIZE = 320
+
+async function renderEtiquetaQR(
+  canvas: HTMLCanvasElement,
+  url: string,
+  codigo: string,
+  qrSize: number = QR_SIZE,
+) {
+  // Alturas de zonas — proporcionales al tamaño del QR
+  // (QR 320 → header 42, footer 26 · QR 180 → header 26, footer 16)
+  const headerH = Math.round(qrSize * 0.13)
+  const footerH = Math.round(qrSize * 0.08)
+  const pad     = Math.round(qrSize * 0.06)   // margen blanco alrededor
+  const w = qrSize + pad * 2
+  const h = headerH + qrSize + footerH + pad * 2
+  canvas.width = w
+  canvas.height = h
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // Fondo blanco
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, w, h)
+
+  // 1) QR (usando un canvas temporal a resolución exacta)
+  const qrCanvas = document.createElement('canvas')
+  await QRCode.toCanvas(qrCanvas, url, {
+    errorCorrectionLevel: 'M',
+    margin: 0,
+    width: qrSize,
+    color: { dark: '#0a0d14', light: '#ffffff' },
+  })
+  ctx.drawImage(qrCanvas, pad, pad + headerH)
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  // 2) Header con el código (bold, negro puro, tamaño proporcional al QR)
+  const headerFontSize = Math.max(11, Math.round(qrSize * 0.075))   // 24px con QR=320
+  ctx.fillStyle = '#000000'
+  ctx.font = `bold ${headerFontSize}px Arial, Helvetica, sans-serif`
+  ctx.fillText(codigo, w / 2, pad + headerH / 2)
+
+  // 3) Footer con identificador fijo de la organización
+  const footerFontSize = Math.max(9, Math.round(qrSize * 0.045))    // ~14px con QR=320
+  ctx.fillStyle = '#334155'
+  ctx.font = `500 ${footerFontSize}px Arial, Helvetica, sans-serif`
+  ctx.fillText(LABEL_ORG_FOOTER, w / 2, pad + headerH + qrSize + footerH / 2)
+}
+
+function QrPreviewInline({ slug, codigo }: { slug: string; codigo: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const url = urlPublicaQR(slug)
   useEffect(() => {
     if (!canvasRef.current) return
-    QRCode.toCanvas(canvasRef.current, url, {
-      errorCorrectionLevel: 'M', margin: 2, width: 200,
-      color: { dark: '#0a0d14', light: '#ffffff' },
-    }).catch(() => {})
-  }, [url])
+    renderEtiquetaQR(canvasRef.current, url, codigo, 180).catch(() => {})
+  }, [url, codigo])
   return (
-    <div className="bg-white p-3 rounded-lg inline-block">
-      <canvas ref={canvasRef} width={200} height={200} />
+    <div className="bg-white p-2 rounded-lg inline-block">
+      <canvas ref={canvasRef} />
     </div>
   )
 }
 
-function QrPreviewModal({ slug, label, onClose }: { slug: string; label: string; onClose: () => void }) {
+function QrPreviewModal({
+  slug, label, sn, onClose,
+}: {
+  slug: string; label: string; sn?: string | null; onClose: () => void
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [copiado, setCopiado] = useState(false)
   const url = urlPublicaQR(slug)
 
   useEffect(() => {
     if (!canvasRef.current) return
-    QRCode.toCanvas(canvasRef.current, url, {
-      errorCorrectionLevel: 'M', margin: 2, width: 320,
-      color: { dark: '#0a0d14', light: '#ffffff' },
-    }).catch(() => {})
-  }, [url])
+    renderEtiquetaQR(canvasRef.current, url, label, QR_SIZE).catch(() => {})
+  }, [url, label])
 
   function descargarPng() {
     const canvas = canvasRef.current
@@ -866,15 +924,18 @@ function QrPreviewModal({ slug, label, onClose }: { slug: string; label: string;
       <div className="surface max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="text-xs text-slate-500 font-mono">QR de la herramienta</div>
+            <div className="text-xs text-slate-500 font-mono">QR imprimible · pega en la herramienta</div>
             <h3 className="font-display text-xl font-extrabold">{label}</h3>
+            {sn && (
+              <div className="text-[11px] text-slate-500 font-mono mt-0.5">SN: {sn}</div>
+            )}
           </div>
           <button className="btn-ghost px-2 py-1.5" onClick={onClose}>
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="bg-white p-4 rounded-lg flex items-center justify-center mb-4">
-          <canvas ref={canvasRef} className="w-[320px] h-[320px]" />
+        <div className="bg-white rounded-lg flex items-center justify-center mb-4 p-2" style={{ minHeight: LABEL_W }}>
+          <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto' }} />
         </div>
         <div className="surface-elevated p-3 mb-4 font-mono text-xs text-slate-300 break-all">{url}</div>
         <div className="flex gap-2">
