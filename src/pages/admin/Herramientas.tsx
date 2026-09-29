@@ -934,7 +934,7 @@ function QrPreviewModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="bg-white rounded-lg flex items-center justify-center mb-4 p-2" style={{ minHeight: LABEL_W }}>
+        <div className="bg-white rounded-lg flex items-center justify-center mb-4 p-2" style={{ minHeight: 400 }}>
           <canvas ref={canvasRef} style={{ maxWidth: '100%', height: 'auto' }} />
         </div>
         <div className="surface-elevated p-3 mb-4 font-mono text-xs text-slate-300 break-all">{url}</div>
