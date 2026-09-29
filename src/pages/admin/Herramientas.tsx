@@ -47,13 +47,31 @@ function urlPublicaQR(slug: string): string {
 }
 
 function siguienteCodigo(items: Herramienta[]): string {
-  // T-001, T-002, … basado en el máximo actual
-  let max = 0
-  for (const h of items) {
-    const m = h.codigo_interno.match(/^T-?(\d+)/i)
-    if (m) max = Math.max(max, parseInt(m[1], 10))
+  // Detecta el patrón dominante en los códigos existentes:
+  //   HLACAL_XXX  (convención HLA — mayoritaria)
+  //   T-XXX
+  //   fallback: HLACAL_001 si la app está recién estrenada
+  const patterns: Array<{ re: RegExp; prefix: string; sep: string; pad: number }> = [
+    { re: /^HLACAL[_-](\d+)/i, prefix: 'HLACAL', sep: '_', pad: 3 },
+    { re: /^T[_-]?(\d+)/i,     prefix: 'T',      sep: '-', pad: 3 },
+  ]
+  let bestPattern = patterns[0]  // HLACAL_XXX por defecto (convención HLA)
+  let maxCount = 0
+  let maxSeen = 0
+  for (const p of patterns) {
+    let count = 0
+    let maxInThis = 0
+    for (const h of items) {
+      const m = h.codigo_interno.match(p.re)
+      if (m) { count++; maxInThis = Math.max(maxInThis, parseInt(m[1], 10)) }
+    }
+    if (count > maxCount) {
+      maxCount = count
+      bestPattern = p
+      maxSeen = maxInThis
+    }
   }
-  return 'T-' + String(max + 1).padStart(3, '0')
+  return bestPattern.prefix + bestPattern.sep + String(maxSeen + 1).padStart(bestPattern.pad, '0')
 }
 
 function diasHasta(iso: string | null | undefined): number | null {
@@ -436,15 +454,28 @@ function NuevaHerramientaModal({
         return
       }
       const d = body.data ?? {}
+      // Si la IA extrajo un código interno con formato HLA (HLACAL_XXX o similar),
+      // lo usamos por encima del T-001 auto-sugerido.
+      const codigoIA = (d.codigo_interno ?? '').toString().trim()
+      // Si sigue faltando vence_en pero hay fecha, +12 meses cliente (por si el edge no lo puso)
+      let venceComputado = d.vence_en ?? ''
+      if (!venceComputado && d.fecha_calibracion) {
+        try {
+          const [y, m, dd] = d.fecha_calibracion.split('-').map((x: string) => parseInt(x, 10))
+          const dt = new Date(Date.UTC(y, m - 1, dd)); dt.setUTCFullYear(dt.getUTCFullYear() + 1)
+          venceComputado = dt.toISOString().slice(0, 10)
+        } catch { /* ignore */ }
+      }
       setFields(prev => ({
         ...prev,
+        codigo_interno: codigoIA || prev.codigo_interno,
         numero_serie: d.numero_serie ?? prev.numero_serie,
         marca: d.marca ?? prev.marca,
         modelo: d.modelo ?? prev.modelo,
         tipo: d.tipo ?? prev.tipo,
         rango: d.rango ?? prev.rango,
         fecha_calibracion: d.fecha_calibracion ?? prev.fecha_calibracion,
-        vence_en: d.vence_en ?? prev.vence_en,
+        vence_en: venceComputado || prev.vence_en,
         laboratorio: d.laboratorio ?? prev.laboratorio,
         incertidumbre_valor: d.incertidumbre?.valor?.toString() ?? prev.incertidumbre_valor,
         incertidumbre_unidad: d.incertidumbre?.unidad ?? prev.incertidumbre_unidad,
@@ -710,12 +741,12 @@ function FormCampos({
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Campo label="Código interno *" value={fields.codigo_interno} onChange={set('codigo_interno')} placeholder="T-047" mono />
-        <Campo label="Número de serie" value={fields.numero_serie} onChange={set('numero_serie')} placeholder="730/20-4A891" mono />
-        <Campo label="Marca" value={fields.marca} onChange={set('marca')} placeholder="Stahlwille" />
-        <Campo label="Modelo" value={fields.modelo} onChange={set('modelo')} placeholder="730/20" />
-        <Campo label="Tipo" value={fields.tipo} onChange={set('tipo')} placeholder="Torquímetro" />
-        <Campo label="Rango" value={fields.rango} onChange={set('rango')} placeholder="15-60 Nm" />
+        <Campo label="Código interno *" value={fields.codigo_interno} onChange={set('codigo_interno')} placeholder="HLACAL_002" mono />
+        <Campo label="Número de serie" value={fields.numero_serie} onChange={set('numero_serie')} placeholder="1050655531" mono />
+        <Campo label="Marca" value={fields.marca} onChange={set('marca')} placeholder="Stahlwille · Limit · Fluke…" />
+        <Campo label="Modelo" value={fields.modelo} onChange={set('modelo')} placeholder="730/20 · 500Auto…" />
+        <Campo label="Tipo" value={fields.tipo} onChange={set('tipo')} placeholder="Torquímetro · Multímetro digital…" />
+        <Campo label="Rango" value={fields.rango} onChange={set('rango')} placeholder="15-60 Nm · 200mV/2V/20V/200V DC…" />
       </div>
 
       <div>
