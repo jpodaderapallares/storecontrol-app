@@ -7,6 +7,7 @@ import { es, enGB, pl } from 'date-fns/locale'
 import clsx from 'clsx'
 import { useT } from '@/lib/i18n'
 import LangSelector from '@/components/ui/LangSelector'
+import { AsistenteIA } from '@/components/ui/AsistenteIA'
 
 const dateLocaleMap = { es, en: enGB, pl } as const
 const dateFormatByLang = {
@@ -114,6 +115,8 @@ export default function StorekeeperLayout() {
       <main className="max-w-[1600px] mx-auto p-8">
         <Outlet />
       </main>
+
+      <AsistenteIA />
     </div>
   )
 }

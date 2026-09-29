@@ -17,6 +17,7 @@ import PlantillasEmail from './pages/admin/PlantillasEmail'
 import StorekeeperHome from './pages/storekeeper/Home'
 import StorekeeperBiblioteca from './pages/storekeeper/Biblioteca'
 import StorekeeperQR from './pages/storekeeper/QR'
+import CheckinSemanal from './pages/storekeeper/Checkin'
 import AdminQR from './pages/admin/QR'
 import Herramientas from './pages/admin/Herramientas'
 import QrRedirect from './pages/qr/QrRedirect'
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/base/:codigo" element={<StorekeeperHome />} />
         <Route path="/base/:codigo/biblioteca" element={<StorekeeperBiblioteca />} />
         <Route path="/base/:codigo/qr" element={<StorekeeperQR />} />
+        <Route path="/base/:codigo/checkin" element={<CheckinSemanal />} />
         <Route path="*" element={<Navigate to={`/base/${useAuth.getState().base?.codigo_iata ?? 'PMI'}`} replace />} />
       </Route>
     </Routes>

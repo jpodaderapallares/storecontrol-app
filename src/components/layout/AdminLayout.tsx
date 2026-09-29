@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import { AsistenteIA } from '@/components/ui/AsistenteIA'
 
 export default function AdminLayout() {
   return (
@@ -10,6 +11,7 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      <AsistenteIA />
     </div>
   )
 }

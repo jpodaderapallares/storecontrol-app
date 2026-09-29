@@ -10,6 +10,7 @@ import { fmtDateTime, diaSemanaTxt } from '@/lib/format'
 import {
   FileUp, Paperclip, CheckCircle2, ExternalLink, FileText,
   BookOpen, AlertCircle, Calendar, Clock, AlertTriangle, ChevronDown, ChevronUp,
+  ClipboardCheck,
 } from 'lucide-react'
 import clsx from 'clsx'
 import type { TareaInstancia } from '@/lib/database.types'
@@ -36,6 +37,15 @@ function ordenarPorEstadoYFecha(arr: InstanciaExtendida[]): InstanciaExtendida[]
   })
 }
 
+function semanaISOActual(d: Date = new Date()): string {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  const day = t.getUTCDay() || 7
+  t.setUTCDate(t.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1))
+  const week = Math.ceil((((t.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return t.getUTCFullYear() + '-W' + String(week).padStart(2, '0')
+}
+
 export default function StorekeeperHome() {
   const { base } = useAuth()
   const { t } = useT()
@@ -43,9 +53,23 @@ export default function StorekeeperHome() {
   const [loading, setLoading] = useState(true)
   const [procedimientos, setProcedimientos] = useState<any[]>([])
   const [mostrarCompletadas, setMostrarCompletadas] = useState(false)
+  const [checkinSemanaFirmado, setCheckinSemanaFirmado] = useState<boolean | null>(null)
   const pendStr = (n: number) => `${n} ${n === 1 ? t('home.pending_one') : t('home.pending_many')}`
 
   useEffect(() => { cargar() }, [base?.id])
+  useEffect(() => { cargarCheckin() }, [base?.id])
+
+  async function cargarCheckin() {
+    if (!base?.id) return
+    const semana = semanaISOActual()
+    const { data } = await supabase
+      .from('check_ins_semanales')
+      .select('id')
+      .eq('base_id', base.id)
+      .eq('semana_iso', semana)
+      .maybeSingle()
+    setCheckinSemanaFirmado(!!data)
+  }
 
   async function cargar() {
     if (!base) return
@@ -141,6 +165,45 @@ export default function StorekeeperHome() {
         label="Escanear QR"
         sublabel="Certificado de calibración, herramienta, documento — abre la cámara"
       />
+
+      {/* Check-in semanal · tarjeta destacada */}
+      <Link
+        to={`/base/${base?.codigo_iata}/checkin`}
+        className={clsx(
+          'block p-5 rounded-2xl border transition-all group',
+          checkinSemanaFirmado === true
+            ? 'bg-gradient-to-br from-success/10 to-success/5 border-success/40 hover:border-success/60'
+            : checkinSemanaFirmado === false
+              ? 'bg-gradient-to-br from-warning/10 via-warning/5 to-transparent border-warning/40 hover:border-warning ring-1 ring-warning/30'
+              : 'bg-bg-elevated border-bg-border',
+        )}
+      >
+        <div className="flex items-center gap-4">
+          <div className={clsx(
+            'w-12 h-12 rounded-xl grid place-items-center flex-shrink-0',
+            checkinSemanaFirmado === true
+              ? 'bg-gradient-to-br from-success to-emerald-600 text-white'
+              : 'bg-gradient-to-br from-warning to-orange-500 text-white',
+          )}>
+            <ClipboardCheck className="w-6 h-6" strokeWidth={2.4} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-display text-lg font-extrabold">
+              Check-in semanal
+              {checkinSemanaFirmado === true && <span className="ml-2 text-success text-sm">✓ firmado</span>}
+              {checkinSemanaFirmado === false && <span className="ml-2 text-warning text-sm">pendiente</span>}
+            </div>
+            <div className="text-xs text-slate-400 mt-0.5">
+              {checkinSemanaFirmado === true
+                ? 'Ya firmaste esta semana. Puedes ver el detalle o el histórico.'
+                : 'Firma 1 vez por semana que todo está en orden en tu base. 6 checkboxes.'}
+            </div>
+          </div>
+          <div className="text-slate-500 group-hover:text-accent group-hover:translate-x-1 transition-all text-xl">
+            ›
+          </div>
+        </div>
+      </Link>
 
       {/* Hero progreso del día */}
       <div className="surface p-6">

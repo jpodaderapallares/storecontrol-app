@@ -361,6 +361,8 @@ export default function Dashboard() {
             </div>
           </div>
 
+          <CheckinsSemanaWidget bases={bases.map(s => s.base)} />
+
           <div className="surface p-5">
             <div className="label mb-3">Actividad reciente</div>
             <div className="space-y-2">
@@ -373,6 +375,91 @@ export default function Dashboard() {
         </div>
       </div>
     </>
+  )
+}
+
+function semanaISOActual(d: Date = new Date()): string {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  const day = t.getUTCDay() || 7
+  t.setUTCDate(t.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1))
+  const week = Math.ceil((((t.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return t.getUTCFullYear() + '-W' + String(week).padStart(2, '0')
+}
+
+function CheckinsSemanaWidget({ bases }: { bases: Base[] }) {
+  const [firmados, setFirmados] = useState<Record<string, { todo_ok: boolean; excep: number }>>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancel = false
+    async function cargar() {
+      const semana = semanaISOActual()
+      const { data } = await supabase
+        .from('check_ins_semanales')
+        .select('base_id, todo_ok, items')
+        .eq('semana_iso', semana)
+      if (cancel) return
+      const map: Record<string, { todo_ok: boolean; excep: number }> = {}
+      for (const r of (data ?? []) as any[]) {
+        const items = Array.isArray(r.items) ? r.items : []
+        map[r.base_id] = {
+          todo_ok: !!r.todo_ok,
+          excep: items.filter((i: any) => !i.ok).length,
+        }
+      }
+      setFirmados(map)
+      setLoading(false)
+    }
+    cargar()
+    return () => { cancel = true }
+  }, [])
+
+  const total = bases.length
+  const firmadosCount = Object.keys(firmados).length
+  const conExcepciones = Object.values(firmados).filter(f => !f.todo_ok).length
+
+  return (
+    <div className="surface p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="label">Check-ins semanales</div>
+        <div className="text-[10px] text-slate-500 font-mono">{semanaISOActual()}</div>
+      </div>
+      {loading ? (
+        <div className="text-xs text-slate-500 flex items-center gap-2">
+          <Loader2 className="w-3 h-3 animate-spin" /> Cargando…
+        </div>
+      ) : (
+        <>
+          <div className="text-2xl font-display font-extrabold mb-1">
+            <span className={firmadosCount === total ? 'text-success' : firmadosCount === 0 ? 'text-danger' : 'text-warning'}>
+              {firmadosCount}
+            </span>
+            <span className="text-slate-500 text-lg"> / {total}</span>
+          </div>
+          <div className="text-xs text-slate-500 mb-3">
+            bases firmadas esta semana
+            {conExcepciones > 0 && <> · <span className="text-warning">{conExcepciones} con excepciones</span></>}
+          </div>
+          <div className="grid grid-cols-8 gap-1">
+            {bases.map(b => {
+              const f = firmados[b.id]
+              const color = !f ? 'bg-slate-700/40 text-slate-500'
+                : f.todo_ok ? 'bg-success/25 text-success border border-success/50'
+                : 'bg-warning/25 text-warning border border-warning/50'
+              return (
+                <div key={b.id}
+                  className={clsx('aspect-square rounded grid place-items-center text-[9px] font-mono font-bold', color)}
+                  title={b.codigo_iata + ' · ' + (f ? (f.todo_ok ? 'firmado OK' : f.excep + ' excepciones') : 'sin firmar')}
+                >
+                  {b.codigo_iata.slice(0, 3)}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
